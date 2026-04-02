@@ -1,0 +1,39 @@
+# narrow_corridor.yaml
+# Two parallel wall segments forming a 1.2 m wide corridor.
+# Tests the robot's ability to navigate a constrained passage.
+# Use with navigation_empty.world.
+# Robot start pose: x=0, y=-5  →  Goal: x=0, y=+5.
+name: narrow_corridor
+description: |
+  Two parallel wall rows creating a 1.2 m corridor along the Y axis.
+  Tests narrow-passage navigation and footprint clearance (Go2: 0.70×0.40 m).
+  Inflation radius 0.55 m → clear passage width needed: 0.70 + 2×0.55 = 1.80 m.
+  This scenario deliberately makes it tight to stress-test the planner.
+obstacles:
+  # West wall row (x=-0.75, 5 segments spanning y in [-4.5, +4.5])
+  - name: wall_w1
+    model: obstacle_wall
+    pose: {x: -0.75, y: -3.5, z: 0.40, yaw: 1.5708}
+  - name: wall_w2
+    model: obstacle_wall
+    pose: {x: -0.75, y: -1.0, z: 0.40, yaw: 1.5708}
+  - name: wall_w3
+    model: obstacle_wall
+    pose: {x: -0.75, y:  1.5, z: 0.40, yaw: 1.5708}
+  - name: wall_w4
+    model: obstacle_wall
+    pose: {x: -0.75, y:  4.0, z: 0.40, yaw: 1.5708}
+
+  # East wall row (x=+0.75)
+  - name: wall_e1
+    model: obstacle_wall
+    pose: {x:  0.75, y: -3.5, z: 0.40, yaw: 1.5708}
+  - name: wall_e2
+    model: obstacle_wall
+    pose: {x:  0.75, y: -1.0, z: 0.40, yaw: 1.5708}
+  - name: wall_e3
+    model: obstacle_wall
+    pose: {x:  0.75, y:  1.5, z: 0.40, yaw: 1.5708}
+  - name: wall_e4
+    model: obstacle_wall
+    pose: {x:  0.75, y:  4.0, z: 0.40, yaw: 1.5708}

@@ -1,0 +1,42 @@
+# scan_from_cloud.yaml
+# Parameters for pointcloud_to_laserscan_node.
+# Converts /lidar/points (3D PointCloud2) to /scan (2D LaserScan)
+# for slam_toolbox.
+#
+# The Unitree L1 LiDAR spans 360° horizontal and 90° vertical FOV.
+# We extract a horizontal slice around the LiDAR's equatorial plane to produce
+# a representative 2D laser scan.
+#
+# ASSUMPTIONS:
+#   A-SCAN-1: lidar_link frame is oriented with +X forward, +Y left, +Z up.
+#   A-SCAN-2: min_height/max_height are relative to the lidar_link frame origin.
+#             A wider slice is used in simulation to ensure enough valid returns
+#             for slam_toolbox map building.
+#   A-SCAN-3: LiDAR min range is 0.05 m.
+
+pointcloud_to_laserscan:
+  ros__parameters:
+    # Output frame for the LaserScan.
+    # Must be a frame that slam_toolbox can look up relative to base_footprint.
+    target_frame: lidar_link       # Assumption A-SCAN-1
+
+    transform_tolerance: 0.05      # [s] TF lookup timeout
+
+    # Height filter (relative to target_frame origin) — Assumption A-SCAN-2
+    # Keep a slice above the sensor equator to suppress floor points.
+    # If scan becomes too sparse, slightly decrease min_height.
+    min_height:  0.02              # [m]
+    max_height:  0.20              # [m]
+
+    # Angular scan parameters
+    angle_min: -3.14159265         # [rad] -180°
+    angle_max:  3.14159265         # [rad] +180°
+    # Match the simulated horizontal sampling (360 points / revolution).
+    angle_increment: 0.01745329    # [rad] 1.0°
+
+    scan_time: 0.1                 # [s] 10 Hz
+    range_min: 0.05                # [m]  Unitree L1 minimum range
+    range_max: 30.0                # [m]  Unitree L1 practical maximum range
+
+    use_inf: true                  # Publish inf for out-of-range points (not NaN)
+    inf_epsilon: 1.0               # [m] inf offset

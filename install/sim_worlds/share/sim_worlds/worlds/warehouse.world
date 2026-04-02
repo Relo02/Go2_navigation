@@ -1,0 +1,187 @@
+<?xml version="1.0"?>
+<!--
+  warehouse.world
+  30×20 m warehouse environment for realistic indoor navigation testing.
+  Layout: perimeter walls + 3 parallel shelving rows with a central aisle.
+
+  Floor plan (top-down, all in metres):
+    ┌──────────────────────────────────────┐
+    │                 15m                  │ ← North wall (y=10)
+    │  [shelf row A]  [shelf row B]  [shelf row C]   │
+    │      aisle A        aisle B       aisle C      │
+    │  [shelf row A]  [shelf row B]  [shelf row C]   │
+    │                                      │
+    └──────────────────────────────────────┘  ← South wall (y=-10)
+      West (x=-15)                East (x=+15)
+
+  Robot start pose: x=0, y=0 (central aisle, clear of shelves).
+  Goal poses: corners and aisle ends work well for path planning tests.
+-->
+<sdf version="1.6">
+  <world name="warehouse">
+
+    <include><uri>model://ground_plane</uri></include>
+
+    <!-- Directional warehouse lighting -->
+    <light name="light_main" type="directional">
+      <pose>0 0 15 0 0.3 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation><range>100</range><constant>0.9</constant><linear>0.01</linear><quadratic>0.001</quadratic></attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+      <cast_shadows>true</cast_shadows>
+    </light>
+    <light name="light_fill" type="directional">
+      <pose>0 0 15 0 -0.3 3.14</pose>
+      <diffuse>0.4 0.4 0.5 1</diffuse>
+      <specular>0.0 0.0 0.0 1</specular>
+      <direction>0.5 -0.1 -0.9</direction>
+      <cast_shadows>false</cast_shadows>
+    </light>
+
+    <physics name="default" default="0" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <scene>
+      <ambient>0.3 0.3 0.3 1</ambient>
+      <background>0.2 0.2 0.25 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- ── Perimeter walls (30 m × 20 m, thickness 0.2 m, height 4 m) ── -->
+    <model name="wall_south">
+      <static>true</static><pose>0 -10 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>30.4 0.2 4.0</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>30.4 0.2 4.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_north">
+      <static>true</static><pose>0 10 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>30.4 0.2 4.0</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>30.4 0.2 4.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_west">
+      <static>true</static><pose>-15 0 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.2 20.0 4.0</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>0.2 20.0 4.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_east">
+      <static>true</static><pose>15 0 2.0 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.2 20.0 4.0</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>0.2 20.0 4.0</size></box></geometry>
+          <material><ambient>0.6 0.6 0.6 1</ambient><diffuse>0.6 0.6 0.6 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Shelving rows (each shelf unit: 2 m wide × 1 m deep × 2.5 m tall) ──
+         Row A: x ∈ [-12, -4]  (4 units)
+         Row B: x ∈ [-4, +4]   (4 units, central row)  — left side
+         Row C: x ∈ [+4, +12]  (4 units)
+         Aisles: x ≈ -3, 0, +3 (1.5 m each)
+         Two tiers: South tier (y ≈ -6), North tier (y ≈ +6)
+    -->
+
+    <!-- Row A — South tier (y=-6) -->
+    <model name="shelf_A_S1"><static>true</static><pose>-11 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_A_S2"><static>true</static><pose>-8.5 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_A_S3"><static>true</static><pose>-6 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Row A — North tier (y=+6) -->
+    <model name="shelf_A_N1"><static>true</static><pose>-11 6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_A_N2"><static>true</static><pose>-8.5 6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Row B — South tier (y=-6, central area) -->
+    <model name="shelf_B_S1"><static>true</static><pose>-2 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_B_S2"><static>true</static><pose>1 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Row C — South tier (y=-6, east side) -->
+    <model name="shelf_C_S1"><static>true</static><pose>6 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_C_S2"><static>true</static><pose>9 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_C_S3"><static>true</static><pose>11.5 -6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Row C — North tier (y=+6) -->
+    <model name="shelf_C_N1"><static>true</static><pose>6 6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+    <model name="shelf_C_N2"><static>true</static><pose>9 6 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 1.0 2.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.0 1.0 2.5</size></box></geometry>
+          <material><ambient>0.55 0.45 0.35 1</ambient><diffuse>0.55 0.45 0.35 1</diffuse></material></visual>
+      </link></model>
+
+  </world>
+</sdf>

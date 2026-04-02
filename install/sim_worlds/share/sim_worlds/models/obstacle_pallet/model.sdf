@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <model name="obstacle_pallet">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <geometry><box><size>1.20 0.80 0.14</size></box></geometry>
+        <surface>
+          <friction><ode><mu>0.7</mu><mu2>0.7</mu2></ode></friction>
+          <contact><ode/></contact>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry><box><size>1.20 0.80 0.14</size></box></geometry>
+        <material>
+          <!-- Weathered wood colour -->
+          <ambient>0.55 0.42 0.28 1</ambient>
+          <diffuse>0.55 0.42 0.28 1</diffuse>
+          <specular>0.02 0.02 0.02 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

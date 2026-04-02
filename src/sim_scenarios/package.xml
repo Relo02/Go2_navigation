@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sim_scenarios</name>
+  <version>0.1.0</version>
+  <description>
+    Runtime obstacle management for Gazebo Classic simulation.
+
+    Nodes:
+      scenario_manager — loads a YAML scenario file and spawns/removes obstacles
+                          via Gazebo SpawnEntity / DeleteEntity services.
+                          Exposes /sim/clear_obstacles (std_srvs/Trigger).
+
+    CLI tools (ros2 run sim_scenarios ...):
+      spawn_obstacle   — one-shot spawn/delete/move of a single obstacle.
+                          Example: ros2 run sim_scenarios spawn_obstacle \
+                            --name box_1 --model obstacle_box --x 2.0 --y 1.0
+
+    Scenario YAML files: share/sim_scenarios/scenarios/
+  </description>
+  <maintainer email="todo@example.com">Maintainer</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sim_worlds</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

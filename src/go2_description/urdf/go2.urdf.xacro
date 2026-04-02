@@ -1,0 +1,204 @@
+<?xml version="1.0"?>
+<!--
+  go2.urdf.xacro
+  Minimal Go2 robot description for Nav2 navigation.
+
+  Frame tree (Nav2 standard contract):
+    base_footprint  (ground projection, z=0 at foot contact level)
+      └─ base_link        (robot body center at standing height)
+           ├─ trunk        (visual/collision body mesh)
+           ├─ imu_link     (co-located with trunk centre)
+           └─ lidar_link   (Unitree L1 LiDAR mount)
+
+  Notes:
+    - base_link is placed at nominal standing torso centre height (0.28 m above ground).
+    - lidar_link pose matches Go2 mounting location used by Nav2/SLAM.
+    - Leg links are omitted (not needed for Nav2). Add them when joint-state
+      visualization or IK is required.
+
+  TODO(sim): Add <gazebo> plugins block (LiDAR ray sensor, IMU sensor, skid-steer
+             or effort controller) behind an xacro:if use_gazebo argument.
+  TODO(agibot): Create agibot_d1_description/urdf/d1.urdf.xacro with the same
+                frame names (base_footprint, base_link, lidar_link, imu_link).
+-->
+<robot name="go2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Arguments
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <xacro:arg name="use_gazebo" default="false"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Physical constants
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <xacro:property name="body_length"  value="0.440"/>   <!-- trunk X -->
+  <xacro:property name="body_width"   value="0.060"/>   <!-- trunk half-width in Y -->
+  <xacro:property name="body_height"  value="0.100"/>   <!-- trunk Z -->
+  <xacro:property name="body_mass"    value="6.921"/>
+
+  <!-- Full robot standing envelope including legs (Unitree Go2 official specs) -->
+  <xacro:property name="stance_length"  value="0.700"/>  <!-- full X with legs -->
+  <xacro:property name="stance_width"   value="0.310"/>  <!-- full Y with legs -->
+  <xacro:property name="stance_height"  value="0.230"/>  <!-- approx clearance:
+                                                              ground to body bottom
+                                                              (standing_height - body_height/2)
+                                                              = 0.28 - 0.05 = 0.23 m -->
+
+  <!-- Nominal standing torso centre height from ground [m]. -->
+  <xacro:property name="standing_height" value="0.28"/>
+
+  <!-- Front-top sensor mount matching official Unitree Go2 radar_joint -->
+  <xacro:property name="lidar_x" value="0.28945"/>
+  <xacro:property name="lidar_y" value="0.0"/>
+  <xacro:property name="lidar_z" value="-0.046825"/>
+  <xacro:property name="lidar_r" value="0.0"/>
+  <!-- <xacro:property name="lidar_p" value="2.8782"/> -->
+  <xacro:property name="lidar_p" value="0.0"/>
+  <xacro:property name="lidar_yaw" value="0.0"/>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       base_footprint  —  ground contact reference (Nav2 global frame anchor)
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <link name="base_footprint">
+    <visual>
+      <geometry><box size="0.001 0.001 0.001"/></geometry>
+    </visual>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       base_link  —  robot body centre
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <parent link="base_footprint"/>
+    <child  link="base_link"/>
+    <origin xyz="0 0 ${standing_height}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <!--
+          TRUNK ONLY — this box represents the rigid body torso, not the full
+          robot envelope. The full standing footprint (700×310 mm including legs)
+          is represented in Nav2 via the footprint parameter in nav2_params.yaml.
+          Replace with mesh when available:
+            <mesh filename="file://$(find go2_description)/meshes/trunk.dae"/>
+        -->
+        <box size="${body_length} ${body_width*2} ${body_height}"/>
+      </geometry>
+      <material name="dark_grey">
+        <color rgba="0.2 0.2 0.2 1.0"/>
+      </material>
+    </visual>
+    <!-- Leg stance envelope — represents full swept area including legs.
+         Positioned at z = -(standing_height - stance_height/2) relative to
+         base_link, which is: -(0.28 - 0.115) = -0.165 m -->
+    <visual name="stance_visual">
+      <origin xyz="0 0 ${-(standing_height - stance_height/2)}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${stance_length} ${stance_width} ${stance_height}"/>
+      </geometry>
+      <material name="stance_grey">
+        <color rgba="0.5 0.5 0.5 0.4"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <!--
+          TRUNK ONLY — this box represents the rigid body torso, not the full
+          robot envelope. The full standing footprint (700×310 mm including legs)
+          is represented in Nav2 via the footprint parameter in nav2_params.yaml.
+          Replace with mesh when available:
+            <mesh filename="file://$(find go2_description)/meshes/trunk.dae"/>
+        -->
+        <box size="${body_length} ${body_width*2} ${body_height}"/>
+      </geometry>
+    </collision>
+    <!-- Leg stance envelope — represents full swept area including legs.
+         Positioned at z = -(standing_height - stance_height/2) relative to
+         base_link, which is: -(0.28 - 0.115) = -0.165 m -->
+    <collision>
+      <origin xyz="0 0 ${-(standing_height - stance_height/2)}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${stance_length} ${stance_width} ${stance_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0.021112 0.0 -0.005366" rpy="0 0 0"/>
+      <mass value="${body_mass}"/>
+      <inertia ixx="0.02448"  ixy="0.00012166" ixz="0.0014849"
+               iyy="0.098077" iyz="-0.0000312"
+               izz="0.107"/>
+    </inertial>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       imu_link  —  co-located with trunk centre (Go2 internal IMU)
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <joint name="base_link_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child  link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link">
+    <inertial>
+      <mass value="0.001"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-7" ixy="0" ixz="0" iyy="1e-7" iyz="0" izz="1e-7"/>
+    </inertial>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       lidar_link  —  Unitree L1 LiDAR optical/spinning centre
+       +X forward, +Y left, +Z up  (standard ROS sensor convention)
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <joint name="base_link_to_lidar" type="fixed">
+    <parent link="base_link"/>
+    <child  link="lidar_link"/>
+    <origin xyz="${lidar_x} ${lidar_y} ${lidar_z}" rpy="${lidar_r} ${lidar_p} ${lidar_yaw}"/>
+  </joint>
+
+  <link name="lidar_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.04" length="0.06"/>
+      </geometry>
+      <material name="lidar_black">
+        <color rgba="0.05 0.05 0.05 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.04" length="0.06"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.001"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1e-7" ixy="0" ixz="0" iyy="1e-7" iyz="0" izz="1e-7"/>
+    </inertial>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Gazebo plugins  (only included when use_gazebo:=true)
+       TODO(sim): Replace stubs with working Gazebo Humble plugins.
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <xacro:if value="$(arg use_gazebo)">
+
+    <!-- Gazebo material -->
+    <gazebo reference="base_link">
+      <material>Gazebo/DarkGrey</material>
+    </gazebo>
+
+    <!-- TODO(sim): Add Gazebo LiDAR ray plugin on lidar_link -->
+    <!-- TODO(sim): Add Gazebo IMU plugin on imu_link -->
+    <!-- TODO(sim): Add differential-drive or effort controller plugin -->
+
+  </xacro:if>
+
+</robot>

@@ -1,0 +1,41 @@
+# go2_params.yaml
+# Go2-specific parameters — consumed only by go2_bringup.
+#
+# TODO(agibot): Create agibot_d1_bringup/config/d1_params.yaml with equivalent
+#               values for the AgiBot D1 Ultra hardware.
+
+# ── Go2 hardware bridge ───────────────────────────────────────────────────────
+go2_hw_bridge:
+  ros__parameters:
+    # Topic published by the Go2 internal ROS2 bridge (sport mode state, ~50 Hz)
+    state_topic:     "/sportmodestate"
+    # Topic published by the Go2 internal ROS2 bridge (low-level state, battery data)
+    lowstate_topic:  "/lowstate"
+    # Velocity commands from Nav2
+    cmd_vel_topic:   "/cmd_vel"
+    # Sport API request topic consumed by the Go2 onboard controller
+    sport_req_topic: "/api/sport/request"
+    # Odometry topic published by go2_hw_bridge.
+    # Keep as "odom" for current stack; switch to "/odom_raw" when EKF fusion is enabled.
+    odom_topic: "odom"
+
+    # TF frame names — must match slam_toolbox and nav2_params.yaml
+    odom_frame: "odom"
+    base_frame: "base_footprint"
+    # When false, go2_hw_bridge publishes Odometry only (no odom->base TF).
+    # Set false when robot_localization owns odom->base TF publication.
+    publish_tf: true
+
+    # Safety: stop the robot if no /cmd_vel received within this many seconds
+    cmd_timeout: 0.5
+
+    # Velocity limits [m/s, rad/s] — applied before forwarding to Sport API
+    # Adjust for the operating environment (slow down indoors, etc.)
+    max_linear_vel:  1.0
+    max_lateral_vel: 0.3
+    max_angular_vel: 1.5
+
+# ── robot_state_publisher ─────────────────────────────────────────────────────
+robot_state_publisher:
+  ros__parameters:
+    publish_frequency: 50.0

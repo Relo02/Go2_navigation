@@ -1,0 +1,69 @@
+# crowded_room.yaml
+# Dense obstacle layout for stress-testing the navigation planner.
+# Use with navigation_empty.world (clear floor space at spawn origin).
+# Robot start pose: x=0, y=0.
+name: crowded_room
+description: |
+  Dense mix of boxes, cylinders, and wall segments throughout a 20×15 m room.
+  Tests collision avoidance, narrow passage navigation, and replanning.
+obstacles:
+  # ── Cluster 1: central corridor blockers ─────────────────────
+  - name: box_c1
+    model: obstacle_box
+    pose: {x:  2.0, y:  0.5, z: 0.50, yaw: 0.0}
+  - name: box_c2
+    model: obstacle_box
+    pose: {x:  2.0, y: -0.8, z: 0.50, yaw: 0.3}
+  - name: cyl_c1
+    model: obstacle_cylinder
+    pose: {x:  3.5, y:  0.0, z: 0.50}
+
+  # ── Cluster 2: east side ──────────────────────────────────────
+  - name: wall_e1
+    model: obstacle_wall
+    pose: {x:  5.0, y:  2.0, z: 0.40, yaw: 1.5708}  # N-S oriented
+  - name: box_e1
+    model: obstacle_box
+    pose: {x:  6.5, y:  2.5, z: 0.50}
+  - name: pallet_e1
+    model: obstacle_pallet
+    pose: {x:  5.5, y: -1.5, z: 0.07}
+  - name: cyl_e1
+    model: obstacle_cylinder
+    pose: {x:  7.0, y: -2.0, z: 0.50}
+
+  # ── Cluster 3: west side ──────────────────────────────────────
+  - name: wall_w1
+    model: obstacle_wall
+    pose: {x: -4.5, y:  1.0, z: 0.40, yaw: 0.0}    # E-W oriented
+  - name: box_w1
+    model: obstacle_box
+    pose: {x: -6.0, y:  3.0, z: 0.50}
+  - name: cyl_w1
+    model: obstacle_cylinder
+    pose: {x: -5.0, y: -2.0, z: 0.50}
+  - name: pallet_w1
+    model: obstacle_pallet
+    pose: {x: -7.0, y:  0.5, z: 0.07}
+
+  # ── Cluster 4: north end ──────────────────────────────────────
+  - name: wall_n1
+    model: obstacle_wall
+    pose: {x:  1.0, y:  5.0, z: 0.40, yaw: 0.7854}  # diagonal
+  - name: box_n1
+    model: obstacle_box
+    pose: {x: -1.5, y:  5.5, z: 0.50}
+  - name: box_n2
+    model: obstacle_box
+    pose: {x:  3.0, y:  5.0, z: 0.50, yaw: 1.5708}
+
+  # ── Cluster 5: south end ──────────────────────────────────────
+  - name: cyl_s1
+    model: obstacle_cylinder
+    pose: {x: -2.0, y: -4.5, z: 0.50}
+  - name: cyl_s2
+    model: obstacle_cylinder
+    pose: {x:  2.5, y: -4.0, z: 0.50}
+  - name: pallet_s1
+    model: obstacle_pallet
+    pose: {x:  0.0, y: -5.5, z: 0.07, yaw: 0.5}

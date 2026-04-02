@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robot_sim</name>
+  <version>0.1.0</version>
+  <description>
+    Gazebo Classic (Gazebo 11) simulation bringup for the Go2 autonomy stack.
+
+    sim_bringup.launch.py launches the full simulation:
+      Gazebo + robot_state_publisher + spawn_entity
+      + slam.launch.py (slam_toolbox, use_sim_time=true)
+      + nav2.launch.py (Nav2, use_sim_time=true)
+      + RViz2
+
+    Real-robot go2_hw_bridge is NOT started — Gazebo's planar_move plugin
+    provides the identical /cmd_vel + /odom + TF(odom→base_footprint) interface.
+
+    All Nav2 config is shared with the real robot (robot_nav/).
+    Only the sensor bridge and robot model differ.
+
+    Portability (TODO(agibot)):
+      ros2 launch robot_sim sim_bringup.launch.py robot:=d1
+      (requires d1_sim/urdf/d1_sim.urdf.xacro to be implemented)
+  </description>
+  <maintainer email="todo@example.com">Maintainer</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>gazebo_plugins</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>sensor_msgs_py</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>robot_nav</exec_depend>
+  <exec_depend>go2_sim</exec_depend>
+  <exec_depend>d1_sim</exec_depend>
+  <exec_depend>sim_worlds</exec_depend>
+  <exec_depend>sim_scenarios</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

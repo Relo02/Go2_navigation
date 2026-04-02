@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robot_safety</name>
+  <version>0.1.0</version>
+  <description>
+    Safety gating layer for the Go2 autonomy stack.
+
+    velocity_limiter node:
+      Sits between Nav2 /cmd_vel and go2_hw_bridge.
+      Publishes /cmd_vel_safe (zero) when:
+        - robot_status.estop_active is true, or
+        - No /cmd_vel received within cmd_timeout seconds (watchdog).
+      Otherwise forwards /cmd_vel unchanged.
+
+    Enable via: ros2 launch go2_bringup go2_bringup.launch.py use_safety:=true
+
+    TODO(safety): Add tilt_monitor node (IMU-based fall/tilt detection → /estop).
+  </description>
+  <maintainer email="todo@example.com">Maintainer</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>robot_common_interfaces</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

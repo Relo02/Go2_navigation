@@ -1,0 +1,7 @@
+# empty.yaml
+# No runtime obstacles — world geometry only.
+name: empty
+description: |
+  Start with a clean world.  Add obstacles manually via:
+    ros2 run sim_scenarios spawn_obstacle --name box_1 --model obstacle_box --x 2.0 --y 1.0 --z 0.5
+obstacles: []

@@ -1,0 +1,64 @@
+# ekf_fusion_params.yaml
+# robot_localization EKF placeholder for body odom + IMU + lidar odom fusion.
+#
+# This file is intentionally conservative and is NOT wired into existing bringup
+# launches by default. Enable it explicitly when your robot provides:
+#   - /odom_raw   (raw body odometry)
+#   - /imu/data   (IMU in REP-103 frame)
+#   - /lidar_odom (optional lidar-derived odometry in odom frame)
+#
+# For Nav2 integration, remap EKF output to /odom and disable duplicate
+# odom->base TF publishers on raw odometry adapters.
+
+ekf_filter_node:
+  ros__parameters:
+    frequency: 50.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    transform_time_offset: 0.0
+    transform_timeout: 0.2
+    print_diagnostics: true
+    publish_tf: true
+    publish_acceleration: false
+
+    # Frame ownership:
+    #   map->odom      : slam_toolbox (or AMCL)
+    #   odom->base_*   : this EKF
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_footprint
+    world_frame: odom
+
+    # Body odometry (required)
+    odom0: /odom_raw
+    odom0_config: [true,  true,  false,
+                   false, false, true,
+                    true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    # IMU (optional but strongly recommended)
+    imu0: /imu/data
+    imu0_config: [false, false, false,
+                  false, false, true,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 20
+    imu0_remove_gravitational_acceleration: true
+
+    # Lidar odometry / scan matcher pose (optional)
+    odom1: /lidar_odom
+    odom1_config: [true,  true,  false,
+                   false, false, true,
+                    true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom1_differential: false
+    odom1_relative: false
+    odom1_queue_size: 10

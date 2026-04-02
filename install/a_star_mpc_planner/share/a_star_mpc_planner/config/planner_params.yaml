@@ -1,0 +1,84 @@
+/**:
+  ros__parameters:
+    # ─────────────────────────────────────────────────────────────
+    # Goal handling
+    # ─────────────────────────────────────────────────────────────
+    wait_for_goal: true            # require runtime goal from RViz (/goal_pose)
+    goal_x: 5.0                    # used only when wait_for_goal=false
+    goal_y: 5.0
+    goal_z: 0.0
+
+    # ─────────────────────────────────────────────────────────────
+    # A* local map/planning settings
+    # ─────────────────────────────────────────────────────────────
+    grid_reso: 0.25                # local grid cell size [m]
+    grid_half_width: 5.0           # local map is 10 m x 10 m
+    grid_std: 0.05               # Gaussian spread [m]; must satisfy 1-CDF(d,0,std)>=threshold for d>0
+    obstacle_threshold: 0.45       # hard-obstacle cutoff (must be <0.5 to ever trigger)
+    obstacle_cost_weight: 8.0      # soft obstacle penalty
+    replan_rate_hz: 10.0           # A* refresh [Hz] — increased to match MPC for continuous adaptation
+    goal_reached_radius: 0.30      # stop replanning near goal
+    planning_height: 0.0
+
+    # ─────────────────────────────────────────────────────────────
+    # MPC horizon parameters
+    # ─────────────────────────────────────────────────────────────
+    mpc_N: 30                    # prediction horizon steps
+    mpc_dt: 0.10                   # time step [s] — 20×0.1=2s horizon
+
+    # ─────────────────────────────────────────────────────────────
+    # Velocity constraints (2D kinematic model)
+    # ─────────────────────────────────────────────────────────────
+    mpc_vx_max: 1.0                # max forward velocity [m/s]
+    mpc_vy_max: 0.5                # max lateral velocity [m/s]
+    mpc_omega_max: 1.5             # max angular velocity [rad/s]
+    mpc_v_ref: 0.5                 # desired cruise speed [m/s]
+
+    # ─────────────────────────────────────────────────────────────
+    # Tracking cost weights
+    # ─────────────────────────────────────────────────────────────
+    mpc_Q_xy: 200.0                 # xy position tracking weight
+    mpc_Q_yaw: 1.0                  # yaw tracking weight (low — A* segments are jagged)
+    mpc_Q_terminal: 100.0          # terminal state weight multiplier
+
+    # ─────────────────────────────────────────────────────────────
+    # Control effort weights
+    # ─────────────────────────────────────────────────────────────
+    mpc_R_vel: 1.0                 # linear velocity control effort
+    mpc_R_omega: 0.5               # angular velocity control effort
+    mpc_R_jerk: 0.5                # smoothness — keep low so robot can turn
+
+    # ─────────────────────────────────────────────────────────────
+    # Obstacle avoidance (logistic sigmoid barrier)
+    # ─────────────────────────────────────────────────────────────
+    mpc_W_obs_sigmoid: 200.0       # reduced from 500 to avoid solver spikes
+    mpc_obs_alpha: 4.0             # lower steepness => better conditioning
+    mpc_obs_r: 0.55                # safety radius [m]
+    mpc_max_obs_constraints: 12    # fewer constraints improves robustness
+    mpc_obs_check_radius: 3.0      # range to search for obstacles [m]
+
+    # ─────────────────────────────────────────────────────────────
+    # IPOPT solver settings
+    # ─────────────────────────────────────────────────────────────
+    mpc_max_iter: 100              # max IPOPT iterations
+    mpc_warm_start: true           # use warm start from previous solution
+
+    # ─────────────────────────────────────────────────────────────
+    # MPC node settings
+    # ─────────────────────────────────────────────────────────────
+    mpc_rate_hz: 10.0               # faster than 10 Hz; aligns with watchdog timing
+    mpc_lookahead_dist: 2.0        # distance to next setpoint [m]
+    max_lidar_range: 6.0           # max lidar range [m]
+
+    # ─────────────────────────────────────────────────────────────
+    # Setpoint -> cmd_vel controller settings
+    # ─────────────────────────────────────────────────────────────
+    cmd_rate_hz: 20.0              # /cmd_vel publish frequency
+    cmd_kp_xy: 2.0                  # body-frame XY proportional gain
+    cmd_kp_yaw: 1.2                # yaw proportional gain
+    cmd_max_vx: 0.8                # forward speed clamp [m/s]
+    cmd_max_vy: 0.25               # lateral speed clamp [m/s]
+    cmd_max_omega: 1.0             # yaw-rate clamp [rad/s]
+    cmd_stop_radius: 0.2           # stop when setpoint distance <= this [m]
+    setpoint_timeout_sec: 2.0      # tolerate EKF hiccups before zeroing cmd_vel
+    enable_yaw_control: true     # rotate to align with path direction

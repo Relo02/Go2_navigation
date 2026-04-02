@@ -1,0 +1,509 @@
+You are a senior ROS 2 / Unitree Go2 hardware engineer.
+You have direct read-write access to the full local repository folder.
+
+Your mission: make the anubi stack run correctly on real Go2 hardware.
+The simulation already works. Your job is hardware-specific verification and fixes.
+
+You must NOT guess. For every claim about topic names, API IDs, or hardware behaviour,
+you must either cite the file you read in the repo, or cite the Unitree documentation at
+https://support.unitree.com/home/en/developer
+Cross-check the documentation before writing a single line of code.
+
+════════════════════════════════════════════════════
+SECTION 0 — GROUND TRUTH: VERIFY ONLINE FIRST
+════════════════════════════════════════════════════
+
+Before reading any repo file, open and read the following Unitree documentation pages:
+
+  https://support.unitree.com/home/en/developer/sports_services
+  https://support.unitree.com/home/en/developer/ros2_data_stream
+  https://support.unitree.com/home/en/developer/Basic_services
+  https://support.unitree.com/home/en/developer/lidar
+
+Extract and record into a working notes file (docs/hw_notes_verified.md):
+
+  A. The exact ROS 2 topic name for sport commands
+     (expected: /api/sport/request, type: unitree_api/msg/Request)
+
+  B. The exact ROS 2 topic names for sport mode state at each frequency band
+     (expected: /sportmodestate, /mf/sportmodestate, /lf/sportmodestate)
+
+  C. The exact ROS 2 topic name for the wireless joystick controller
+     (expected: /wirelesscontroller, type: unitree_go/msg/WirelessController)
+     Fields: lx, ly, rx, ry (float32, range -1..+1), keys (uint16 bitmask)
+
+  D. The exact API IDs for every sport method you will use.
+     Verify each of these specifically — do not assume from previous context:
+       StandUp            → expected 1004
+       StandDown          → expected 1005
+       BalanceStand       → expected 1002
+       StopMove           → expected 1003
+       RecoveryStand      → expected 1006
+       Move(vx,vy,vyaw)   → expected 1008
+       SwitchGait(int)    → expected 1011
+       SpeedLevel(int)    → expected 1015
+       ContinuousGait(bool) → expected 1019
+       SwitchJoystick(bool) → expected 1027
+       ClassicWalk(bool)  → expected 2049
+     For each ID: confirm or correct it. If the documentation shows a different ID,
+     use the documented ID.
+     IMPORTANT NOTE: Community sources report SwitchJoystick (1027) does NOT work
+     reliably via the ROS2 topic interface on some firmware versions — verify this
+     claim against the official docs and test empirically on the hardware.
+
+  E. The JSON parameter format for Move:
+     Verify key names: expected {"x": vx, "y": vy, "z": vyaw}
+     Confirm against the documented wire format.
+
+  F. The built-in LiDAR topic names when the L1 is the INTERNAL lidar on Go2 EDU
+     whose data passes through the Go2's own internal computer and DDS bridge.
+     This is NOT an external lidar with its own companion PC driver.
+     The internal Go2 computer (192.168.123.18) runs the unilidar driver and
+     forwards its topics over the Cyclone DDS multicast to the companion PC.
+     Verify:
+       - Does the topic name remain: /unilidar/cloud ?
+       - Or does it get a namespace prefix from the Go2 bridge?
+       - Frame id: is it still "unilidar_lidar" ?
+       - Confirm by checking:
+           https://support.unitree.com/home/en/developer/lidar
+           and the unitreerobotics/unilidar_sdk README on GitHub
+     Record the EXACT topic name and frame id that appear on the ROS2 network
+     when connected to a real Go2 EDU with built-in L1.
+
+  G. The physical mount orientation of the L1 on the Go2:
+     The L1 is mounted on the robot's head/front. Determine:
+       - Is there a pitch (tilt) angle in the physical mount?
+       - If yes, what is the approximate tilt angle?
+       - Does the unilidar driver on the internal computer already compensate
+         for this tilt, or are the points published in the sensor's own frame
+         without compensation?
+       - Check the URDF in go2_description/urdf/go2.urdf.xacro for the lidar_link
+         RPY values — these are the ground truth for the mount transform.
+       - If the driver publishes in an uncompensated tilted frame AND the URDF
+         lidar_link has a non-zero pitch, a static transform with the correct
+         RPY is needed. If the driver already compensates, no rotation is needed.
+     Record your finding with the exact RPY values used.
+
+After completing Section 0, proceed to the tasks below.
+
+════════════════════════════════════════════════════
+SECTION 1 — READ THE REPO
+════════════════════════════════════════════════════
+
+Read all of these files before touching any code:
+
+  src/go2_bringup/src/go2_hw_bridge.cpp
+  src/go2_bringup/src/sport_client.cpp
+  src/go2_bringup/include/go2_bringup/sport_client.hpp
+  src/go2_bringup/launch/go2_bringup.launch.py
+  src/go2_bringup/config/go2_params.yaml
+  src/go2_description/urdf/go2.urdf.xacro     ← check lidar_link RPY here
+  src/robot_nav/config/scan_from_cloud.yaml
+  src/robot_nav/config/nav2_params.yaml
+  src/robot_safety/scripts/velocity_limiter_node.py
+  src/robot_safety/launch/safety.launch.py
+  src/robot_safety/config/   (all files)
+
+From your read, record in docs/hw_notes_verified.md:
+
+  - Current topic used for sport requests in go2_hw_bridge.cpp
+    → compare against what the Unitree docs say for real hardware
+  - How cmd_vel is translated to Move() — check JSON key names exactly
+  - What startup commands (if any) are sent on node init
+  - What the watchdog sends when /cmd_vel is silent
+  - The topic currently configured for LiDAR in scan_from_cloud.yaml
+  - The frame_id currently configured for LiDAR
+  - The lidar_link RPY in the URDF (critical for the rotation decision)
+  - Whether any static TF bridge exists for the lidar frame
+  - Whether velocity_limiter is in the cmd_vel path
+  - Nav2 base_frame and footprint settings
+
+════════════════════════════════════════════════════
+SECTION 2 — SPORT API AUDIT AND CLASSICWALK STARTUP
+════════════════════════════════════════════════════
+
+2a. COMPARE go2_hw_bridge.cpp against the verified API facts from Section 0.
+
+    Check every API call:
+      - Move JSON keys match documented format
+      - StopMove has correct ID
+      - Any other existing calls have correct IDs
+    If any mismatch is found, fix it and explain why.
+
+2b. ADD a one-shot startup sequence to go2_hw_bridge.cpp.
+
+    Trigger: fired ONCE on the FIRST valid /sportmodestate message received.
+    Guard: bool startup_done_ = false; set to true before sending first command.
+
+    Startup sequence (use rclcpp one-shot timer chain, 300 ms between steps):
+      Step 1: RecoveryStand()    — recover from any abnormal position
+      Step 2: StandUp()          — ensure robot is upright
+      Step 3: ClassicWalk(true)  — engage ClassicWalk gait (verify API ID)
+      Step 4: ContinuousGait(true) — enable continuous gait
+      Step 5: SpeedLevel(level)  — set conservative indoor speed
+
+    Parameters to add to go2_params.yaml:
+      enable_startup_sequence: true   # disable for bench testing
+      startup_speed_level: 1          # 0=slow, 1=normal, 2=fast
+
+    IMPORTANT: If the firmware version on the target robot does NOT support
+    ClassicWalk as a separate API (i.e., ClassicWalk is the default gait and is
+    selected via SwitchGait(0)), adapt the sequence accordingly.
+    The goal is "stable trotting gait suitable for indoor navigation" —
+    use whatever API the firmware exposes to achieve that state.
+
+2c. VERIFY SwitchJoystick behaviour.
+
+    Community sources note that SwitchJoystick(true) via /api/sport/request
+    may not work on all firmware versions. The joystick_safety_node architecture
+    (Task 3 below) must NOT depend on SwitchJoystick working.
+    If SwitchJoystick is unreliable, the safety interlock must rely entirely on
+    the ROS2 side (Nav2 goal cancellation + velocity zeroing).
+    Document this finding and implement accordingly.
+
+════════════════════════════════════════════════════
+SECTION 3 — LIDAR TOPIC AND POINTCLOUD AUDIT
+════════════════════════════════════════════════════
+
+3a. DETERMINE the exact built-in L1 topic name on real hardware.
+
+    Using the verified fact from Section 0F:
+    If the built-in L1 on Go2 EDU publishes through the internal DDS bridge
+    with a namespace or different topic name from the standalone driver default,
+    update scan_from_cloud.yaml and any related config to use the correct name.
+
+    Check candidates:
+      /unilidar/cloud           — default from standalone unilidar_sdk
+      /utlidar/cloud            — alternative naming seen in some Go2 firmware
+      /point_cloud2             — seen in some go2_ros2_sdk implementations
+
+    Do not assume. Verify against the documentation and, if available, by running:
+      ssh unitree@192.168.123.18 "ros2 topic list | grep -i lidar"
+      ssh unitree@192.168.123.18 "ros2 topic list | grep -i cloud"
+      ssh unitree@192.168.123.18 "ros2 topic list | grep -i point"
+
+    Record the confirmed topic name and update all config files to use it.
+
+3b. DETERMINE the correct frame_id for the built-in L1.
+
+    The driver on the internal computer publishes in some frame
+    (likely "unilidar_lidar"). Your URDF defines "lidar_link".
+    Determine whether a static TF bridge is needed and with what parameters.
+
+3c. DETERMINE whether pointcloud rotation is needed.
+
+    Using the RPY of lidar_link in the URDF (read in Section 1):
+
+    Case A — lidar_link has non-zero pitch (tilted mount):
+      The L1 is physically tilted. The driver publishes in the sensor frame
+      (i.e., the pointcloud axes are aligned with the sensor, not the world).
+      A static transform from lidar_link to unilidar_lidar must include the
+      correct inverse RPY to rotate sensor-frame points into the URDF-frame.
+
+    Case B — lidar_link has zero pitch (flat mount):
+      No rotation needed. The static transform is identity.
+
+    Implement the correct static_transform_publisher in go2_bringup.launch.py.
+    State explicitly in code comments which case applies and why.
+
+3d. VERIFY scan_from_cloud.yaml height filter is still appropriate.
+
+    The height filter [min_height, max_height] was tuned for the simulation.
+    On real hardware with the actual tilt and mount height, verify:
+      - min_height and max_height in the sensor frame are correct
+      - Ground plane returns are filtered out
+      - Robot body returns are filtered out (or handled by costmap inflation)
+    Adjust if necessary. Document the reasoning.
+
+════════════════════════════════════════════════════
+SECTION 4 — JOYSTICK SAFETY INTERLOCK (HARD SAFETY)
+════════════════════════════════════════════════════
+
+Create src/go2_bringup/scripts/joystick_safety_node.py
+
+ARCHITECTURE:
+  This node subscribes to /wirelesscontroller.
+  When the joystick is touched (any axis > deadzone or any button pressed):
+    1. Cancel all active Nav2 goals immediately
+    2. Publish /joystick_override = True (std_msgs/Bool, latched)
+    3. Log WARNING once: "JOYSTICK OVERRIDE: autonomous navigation suspended"
+  When joystick returns to neutral for >= neutral_hold_secs:
+    1. Publish /joystick_override = False
+    2. Log INFO once: "Joystick returned to neutral — Nav2 re-enabled"
+
+DETECTION LOGIC:
+  DEADZONE_THRESH = 0.05   (param: joystick_deadzone)
+  NEUTRAL_HOLD    = 2.0 s  (param: neutral_hold_secs)
+  WATCHDOG_TIMEOUT = 1.0 s  (param: watchdog_timeout)
+
+  active = (abs(lx) > DEADZONE_THRESH or
+            abs(ly) > DEADZONE_THRESH or
+            abs(rx) > DEADZONE_THRESH or
+            abs(ry) > DEADZONE_THRESH or
+            keys != 0)
+
+  Watchdog: if no /wirelesscontroller message received for watchdog_timeout seconds,
+  treat as NEUTRAL (not active). The robot publishes at ~100 Hz when idle;
+  silence means the bridge crashed, not that someone is pressing buttons.
+  Do NOT trigger override on watchdog timeout.
+
+NAV2 GOAL CANCELLATION:
+  Use rclpy.action.ActionClient targeting /navigate_to_pose.
+  Track the current goal handle. On override activation, call
+  goal_handle.cancel_goal_async() if a goal is active.
+  This is the primary mechanism. SwitchJoystick is NOT relied upon for safety.
+
+OPERATOR INTENT:
+  When override is active, the human operator controls the robot via the
+  physical joystick through Go2's internal controller. The ROS2 stack must
+  be completely silent — zero cmd_vel, no Nav2 goals, no movement commands.
+  Do NOT send Move() or StopMove() while override is active; the physical
+  controller already handles the robot.
+
+STATE MACHINE:
+  NEUTRAL  → (active == true)  → OVERRIDE
+  OVERRIDE → (active == false AND held for neutral_hold_secs) → NEUTRAL
+
+CRITICAL RULES:
+  - This interlock is HARD. There is no runtime parameter to bypass it.
+  - The use_joystick_safety launch argument controls whether the NODE LAUNCHES.
+    Once running, it cannot be disabled.
+  - velocity_limiter_node.py must also gate on /joystick_override = True.
+
+════════════════════════════════════════════════════
+SECTION 5 — VELOCITY LIMITER UPDATE
+════════════════════════════════════════════════════
+
+Modify src/robot_safety/scripts/velocity_limiter_node.py:
+
+  Add subscription: /joystick_override  (std_msgs/Bool)
+  Add gating rule (after estop, before watchdog):
+    If joystick_override == True → output zero velocity
+    Log WARNING once on transition to override-blocked state.
+    Log INFO once on clearing.
+
+  New param: joystick_override_topic (default: "/joystick_override")
+  All existing logic for estop and watchdog must remain unchanged.
+
+════════════════════════════════════════════════════
+SECTION 6 — LAUNCH FILE AND PARAMS
+════════════════════════════════════════════════════
+
+6a. Update src/go2_bringup/launch/go2_bringup.launch.py:
+
+    Add launch argument:
+      use_joystick_safety (default: 'true')
+      Description: 'Enable joystick override safety interlock. false = bench only'
+
+    Add joystick_safety_node (conditioned on use_joystick_safety):
+      package: go2_bringup
+      executable: joystick_safety_node.py
+      parameters from go2_params.yaml joystick_safety section
+
+    Add static_transform_publisher for lidar TF bridge:
+      Use the RPY determined in Section 3c.
+      Add BEFORE slam/navigation includes.
+      This is UNCONDITIONAL — always launched.
+
+6b. Update src/go2_bringup/config/go2_params.yaml:
+
+    Under go2_hw_bridge.ros__parameters:
+      enable_startup_sequence: true
+      startup_speed_level: 1
+
+    New top-level section:
+      joystick_safety:
+        ros__parameters:
+          joystick_deadzone:    0.05
+          neutral_hold_secs:    2.0
+          watchdog_timeout:     1.0
+          joystick_topic:       "/wirelesscontroller"
+          override_topic:       "/joystick_override"
+
+6c. Update src/go2_bringup/CMakeLists.txt:
+    Install scripts/joystick_safety_node.py via install(PROGRAMS ...)
+
+6d. Update src/go2_bringup/package.xml:
+    Add exec_depend for unitree_go, nav2_msgs, std_msgs, rclpy if not present.
+
+════════════════════════════════════════════════════
+SECTION 7 — ADDITIONAL HARDWARE CHECKS
+════════════════════════════════════════════════════
+
+7a. Network and timing
+    - Confirm DDS domain ID matches between companion PC and Go2
+      (Go2 internal uses domain 0 by default — verify in docs)
+    - Confirm RMW_IMPLEMENTATION is cyclonedds or fastrtps consistently
+    - Check NTP/time sync: ros2 topic echo /clock or chronyc tracking
+    - Confirm the companion PC can reach 192.168.123.161 (ping test)
+
+7b. TF tree completeness on real hardware
+    - odom → base_footprint → base_link must exist
+    - base_link → lidar_link must exist (from URDF via robot_state_publisher)
+    - lidar_link → unilidar_lidar must exist (from static_transform_publisher)
+    - No broken chains or missing transforms
+    - Verify with: ros2 run tf2_tools view_frames
+
+7c. Odometry source on real hardware
+    - go2_hw_bridge subscribes to /sportmodestate to produce /odom
+    - Confirm /sportmodestate is available at expected frequency
+    - Confirm odom frame_id = "odom", child_frame_id = "base_footprint"
+    - Confirm pose.pose.position.z == 0.0 (Nav2 2D convention)
+
+7d. Joint states for robot_state_publisher
+    - On real hardware, joint states come from the Go2 bridge
+    - Confirm /joint_states is published and robot_state_publisher
+      receives it so the full TF chain is valid
+
+7e. Costmap self-filtering
+    - The Nav2 footprint must match the real robot dimensions
+    - Verify robot_radius or footprint polygon in nav2_params.yaml
+      matches the new Go2 URDF dimensions
+    - The LiDAR mount on the robot head will see the back of the head —
+      confirm the observation_sources height filter excludes robot body returns
+
+════════════════════════════════════════════════════
+SECTION 8 — FILES TO PRODUCE
+════════════════════════════════════════════════════
+
+Produce all of the following complete files:
+
+  1. docs/hw_notes_verified.md      ← your Section 0 research findings
+  2. src/go2_bringup/src/go2_hw_bridge.cpp         (startup sequence added)
+  3. src/go2_bringup/scripts/joystick_safety_node.py  (NEW)
+  4. src/robot_safety/scripts/velocity_limiter_node.py (joystick gate added)
+  5. src/go2_bringup/launch/go2_bringup.launch.py  (TF bridge + safety node)
+  6. src/go2_bringup/config/go2_params.yaml        (new params)
+  7. src/robot_nav/config/scan_from_cloud.yaml      (topic + height verified)
+  8. src/go2_bringup/CMakeLists.txt                (install scripts)
+  9. src/go2_bringup/package.xml                   (deps added if missing)
+  10. docs/hw_integration_checklist.md             (see Section 9)
+
+════════════════════════════════════════════════════
+SECTION 9 — INTEGRATION TEST CHECKLIST
+════════════════════════════════════════════════════
+
+Produce docs/hw_integration_checklist.md with this exact structure:
+
+## Go2 Hardware Integration Checklist
+
+### Pre-flight
+- [ ] Go2 powered on, standing, not in Damped mode
+- [ ] Companion PC on same network as Go2 (ping 192.168.123.161 succeeds)
+- [ ] DDS domain ID matches on both sides
+      (verify: echo $ROS_DOMAIN_ID on both; Go2 default is 0)
+- [ ] RMW_IMPLEMENTATION consistent
+      (verify: echo $RMW_IMPLEMENTATION on companion PC)
+- [ ] Time sync confirmed: chronyc tracking shows offset < 50 ms
+- [ ] source install/setup.bash run in all terminals
+
+### Topic availability check (run before launching stack)
+- [ ] ros2 topic list | grep -E 'sportmodestate|wirelesscontroller|api/sport'
+      Must show: /sportmodestate, /wirelesscontroller, /api/sport/request
+- [ ] ros2 topic hz /sportmodestate   → expect ~50 Hz
+- [ ] ros2 topic hz /wirelesscontroller → expect ~100 Hz
+- [ ] ros2 topic list | grep -iE 'lidar|cloud|point'
+      Confirm the exact LiDAR topic name (recorded in hw_notes_verified.md)
+- [ ] ros2 topic echo <lidar_topic> --once | grep frame_id
+      Confirm frame_id matches what the static TF bridge expects
+
+### Stack launch verification
+- [ ] ros2 launch go2_bringup go2_bringup.launch.py use_safety:=true
+- [ ] No ERROR within first 5 seconds
+- [ ] Startup sequence log lines appear:
+      "[go2_hw_bridge] Startup: RecoveryStand"
+      "[go2_hw_bridge] Startup: StandUp"
+      "[go2_hw_bridge] Startup: ClassicWalk(true)"
+      "[go2_hw_bridge] Startup: ContinuousGait(true)"
+      "[go2_hw_bridge] Startup: SpeedLevel(1)"
+- [ ] Robot transitions to ClassicWalk gait (audible gait change)
+
+### Sport API verification
+- [ ] ros2 topic echo /api/sport/request --once after sending a cmd_vel
+      Verify: api_id = 1008, parameter = {"x":...,"y":...,"z":...}
+- [ ] Test forward motion:
+      ros2 topic pub --once /cmd_vel geometry_msgs/Twist \
+        "{linear:{x:0.1},angular:{z:0.0}}"
+      Robot takes one step forward. Watchdog fires StopMove (api_id=1003) after timeout.
+
+### Odometry and TF verification
+- [ ] ros2 topic hz /odom → ~50 Hz
+- [ ] ros2 topic echo /odom --once
+      frame_id="odom", child_frame_id="base_footprint", position.z=0.0
+- [ ] ros2 run tf2_tools view_frames
+      Chain must exist: odom→base_footprint→base_link→lidar_link→unilidar_lidar
+
+### LiDAR verification
+- [ ] ros2 topic hz <lidar_topic> → expect 10 Hz
+- [ ] ros2 topic hz /scan → expect 10 Hz
+- [ ] RViz: visualize /scan with Fixed Frame = base_link
+      Obstacles in front of robot appear at correct range
+      No spurious floor/ceiling returns
+      Robot body is NOT visible as a ring of obstacles
+- [ ] Rotate robot 360°: scan is consistent and symmetric
+
+### Joystick safety interlock verification
+- [ ] ros2 topic echo /joystick_override
+      At rest: data: false
+- [ ] Move LEFT STICK on wireless joystick
+      Immediately: /joystick_override → data: true
+      If Nav2 goal active: goal is cancelled
+      Log: "JOYSTICK OVERRIDE: autonomous navigation suspended"
+- [ ] ros2 topic echo /cmd_vel_safe while override active → all zeros
+- [ ] Release joystick, wait 2 seconds
+      /joystick_override → data: false
+      Log: "Joystick returned to neutral — Nav2 re-enabled"
+- [ ] Kill Go2 bridge temporarily (simulate watchdog):
+      joystick_safety_node watchdog fires after 1 s
+      /joystick_override remains false (watchdog = neutral, NOT override)
+
+### Navigation end-to-end
+- [ ] Set Nav2 goal 1 m ahead in RViz
+      Robot starts moving within 2 seconds
+      Robot stops at goal
+      api_id=1003 (StopMove) published when goal reached
+- [ ] Move joystick during active goal:
+      Goal immediately cancelled
+      Robot stops autonomous movement
+      Release joystick → 2 s → set new goal → robot resumes
+
+════════════════════════════════════════════════════
+SECTION 10 — CRITICAL RULES
+════════════════════════════════════════════════════
+
+C-1  TOPIC NAMES ARE GROUND TRUTH FROM DOCS.
+     If the Unitree documentation shows a different topic name than what is
+     currently in the codebase, update the code to match the documentation.
+     Never assume simulation names match hardware names.
+
+C-2  LIDAR TILT DECISION IS DATA-DRIVEN.
+     Read the URDF lidar_link RPY. Check the docs for driver compensation.
+     Implement the static transform based on measured values, not assumptions.
+     If the URDF shows rpy="0 -0.26 0" (approx 15° forward tilt), that tilt
+     must be reflected in the static transform from lidar_link to unilidar_lidar.
+     If the URDF shows rpy="0 0 0", identity transform is correct.
+
+C-3  JOYSTICK OVERRIDE IS HARD AND UNCONDITIONAL.
+     Once joystick_safety_node is launched (use_joystick_safety=true),
+     the override is always active. No runtime parameter disables it.
+     It is a safety measure, not a convenience feature.
+
+C-4  DO NOT FIGHT THE PHYSICAL CONTROLLER.
+     While the human operator moves the joystick, the Go2's internal controller
+     handles the robot. The ROS2 stack must be completely silent: no Move(),
+     no StopMove() sent while /joystick_override is True.
+     The go2_hw_bridge watchdog will eventually fire its own StopMove, which
+     is harmless since the physical controller ignores it.
+
+C-5  STARTUP SEQUENCE IS ONE-SHOT PER PROCESS.
+     The startup_done_ flag prevents re-sending ClassicWalk if the node
+     restarts mid-operation. It fires once per process lifetime.
+
+C-6  PRESERVE EXISTING TOPIC NAMES.
+     /cmd_vel, /odom, /scan, /map, /robot_status must remain unchanged.
+     Only ADD new topics (/joystick_override).
+
+C-7  VERIFY, DO NOT ASSUME, DDS DOMAIN AND RMW.
+     Mismatch in DDS domain or RMW implementation is the single most common
+     cause of "ros2 topic list is empty on companion PC" on real hardware.
+     Document the correct values in hw_notes_verified.md and in the checklist.

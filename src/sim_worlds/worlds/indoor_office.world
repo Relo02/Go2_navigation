@@ -1,0 +1,215 @@
+<?xml version="1.0"?>
+<!--
+  indoor_office.world
+  20×15 m open-plan office environment.
+
+  Layout:
+    - Perimeter walls
+    - Reception desk cluster near entrance (south)
+    - Two rows of workstation cubicles (centre)
+    - Meeting room (north-west, enclosed with partial walls)
+    - Server room partition (north-east)
+
+  Designed for testing narrow-corridor navigation, doorway negotiation,
+  and cluttered indoor environments.
+-->
+<sdf version="1.6">
+  <world name="indoor_office">
+
+    <include><uri>model://ground_plane</uri></include>
+
+    <!-- Ceiling-mounted office lighting -->
+    <light name="light_center" type="point">
+      <pose>0 0 3.5 0 0 0</pose>
+      <diffuse>0.85 0.85 0.95 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation><range>25</range><constant>0.5</constant><linear>0.02</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+    <light name="light_west" type="point">
+      <pose>-6 0 3.5 0 0 0</pose>
+      <diffuse>0.7 0.7 0.85 1</diffuse>
+      <specular>0.05 0.05 0.05 1</specular>
+      <attenuation><range>15</range><constant>0.5</constant><linear>0.04</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+    <light name="light_east" type="point">
+      <pose>6 0 3.5 0 0 0</pose>
+      <diffuse>0.7 0.7 0.85 1</diffuse>
+      <specular>0.05 0.05 0.05 1</specular>
+      <attenuation><range>15</range><constant>0.5</constant><linear>0.04</linear><quadratic>0.001</quadratic></attenuation>
+      <cast_shadows>false</cast_shadows>
+    </light>
+
+    <physics name="default" default="0" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <scene>
+      <ambient>0.4 0.4 0.45 1</ambient>
+      <background>0.85 0.85 0.9 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- ── Perimeter walls (20 m × 15 m, thickness 0.15 m, height 2.8 m) ── -->
+    <model name="wall_south">
+      <static>true</static><pose>0 -7.5 1.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>20.3 0.15 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>20.3 0.15 2.8</size></box></geometry>
+          <material><ambient>0.9 0.9 0.88 1</ambient><diffuse>0.9 0.9 0.88 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_north">
+      <static>true</static><pose>0 7.5 1.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>20.3 0.15 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>20.3 0.15 2.8</size></box></geometry>
+          <material><ambient>0.9 0.9 0.88 1</ambient><diffuse>0.9 0.9 0.88 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_west">
+      <static>true</static><pose>-10 0 1.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.15 15.0 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>0.15 15.0 2.8</size></box></geometry>
+          <material><ambient>0.9 0.9 0.88 1</ambient><diffuse>0.9 0.9 0.88 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="wall_east">
+      <static>true</static><pose>10 0 1.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.15 15.0 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>0.15 15.0 2.8</size></box></geometry>
+          <material><ambient>0.9 0.9 0.88 1</ambient><diffuse>0.9 0.9 0.88 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Reception desk cluster (south entrance area) ── -->
+    <!-- Main reception counter: 2 m × 0.8 m × 1.1 m desk -->
+    <model name="reception_desk">
+      <static>true</static><pose>0 -5.5 0.55 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.0 0.8 1.1</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>2.0 0.8 1.1</size></box></geometry>
+          <material><ambient>0.7 0.65 0.5 1</ambient><diffuse>0.7 0.65 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- Side unit -->
+    <model name="reception_side">
+      <static>true</static><pose>1.3 -4.9 0.45 0 0 1.5708</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>1.0 0.6 0.9</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>1.0 0.6 0.9</size></box></geometry>
+          <material><ambient>0.7 0.65 0.5 1</ambient><diffuse>0.7 0.65 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Workstation cubicle dividers (two rows) ── -->
+    <!-- Row 1: y ≈ -1.5, x from -7 to +3 -->
+    <model name="divider_R1_1"><static>true</static><pose>-6 -1.5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.8 0.08 1.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.8 0.08 1.5</size></box></geometry>
+          <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material></visual>
+      </link></model>
+    <model name="divider_R1_2"><static>true</static><pose>-2.5 -1.5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.8 0.08 1.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.8 0.08 1.5</size></box></geometry>
+          <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material></visual>
+      </link></model>
+    <model name="divider_R1_3"><static>true</static><pose>1 -1.5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.8 0.08 1.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.8 0.08 1.5</size></box></geometry>
+          <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- Row 2: y ≈ +1.5 -->
+    <model name="divider_R2_1"><static>true</static><pose>-6 1.5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.8 0.08 1.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.8 0.08 1.5</size></box></geometry>
+          <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material></visual>
+      </link></model>
+    <model name="divider_R2_2"><static>true</static><pose>-2.5 1.5 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.8 0.08 1.5</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>2.8 0.08 1.5</size></box></geometry>
+          <material><ambient>0.75 0.75 0.75 1</ambient><diffuse>0.75 0.75 0.75 1</diffuse></material></visual>
+      </link></model>
+
+    <!-- ── Meeting room (north-west corner, partial enclosure) ── -->
+    <!-- West wall of meeting room (connects to perimeter) -->
+    <model name="meeting_wall_s">
+      <static>true</static><pose>-5.5 4.25 1.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>4.8 0.12 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>4.8 0.12 2.8</size></box></geometry>
+          <material><ambient>0.85 0.85 0.85 1</ambient><diffuse>0.85 0.85 0.85 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- East partial wall (door gap 1.0 m from right end) -->
+    <model name="meeting_wall_e_upper">
+      <static>true</static><pose>-3.15 5.75 1.4 0 0 1.5708</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.5 0.12 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>2.5 0.12 2.8</size></box></geometry>
+          <material><ambient>0.85 0.85 0.85 1</ambient><diffuse>0.85 0.85 0.85 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <!-- Meeting table -->
+    <model name="meeting_table">
+      <static>true</static><pose>-6.5 6.0 0.38 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>2.4 1.2 0.76</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>2.4 1.2 0.76</size></box></geometry>
+          <material><ambient>0.5 0.4 0.3 1</ambient><diffuse>0.5 0.4 0.3 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ── Server room partition (north-east corner) ── -->
+    <model name="server_wall_s">
+      <static>true</static><pose>5.5 4.0 1.4 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>4.8 0.12 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>4.8 0.12 2.8</size></box></geometry>
+          <material><ambient>0.7 0.7 0.7 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+    <model name="server_wall_w">
+      <static>true</static><pose>3.1 5.75 1.4 0 0 1.5708</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>3.5 0.12 2.8</size></box></geometry></collision>
+        <visual name="vis">
+          <geometry><box><size>3.5 0.12 2.8</size></box></geometry>
+          <material><ambient>0.7 0.7 0.7 1</ambient><diffuse>0.7 0.7 0.7 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
