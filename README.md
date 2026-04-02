@@ -1,248 +1,238 @@
-# Anubi — Go2 Nav2 Autonomy Stack
+# A* + MPC Planner for Go2 Quadruped
 
-Minimal, clean, production-oriented ROS 2 Humble autonomy stack for the **Unitree Go2**
-quadruped robot.  Navigation uses **Nav2**; localisation uses **slam_toolbox** (2D SLAM).
-Everything is self-contained: no upstream workspace needs to be sourced at runtime.
+Local navigation stack for the Unitree Go2 quadruped robot.  
+Two ROS 2 nodes work in sequence: **A\* path planning** produces a collision-free waypoint path; **MPC tracking** follows that path while performing real-time obstacle avoidance.
 
 ---
 
-## Repository Layout
+## Architecture
 
 ```
-src/
-├── unitree_api/              # Unitree Go2 API request/response messages
-├── unitree_go/               # Go2 hardware messages (SportModeState, LowState, …)
-├── go2_description/          # URDF/xacro: body + sensor frames
-├── robot_common_interfaces/  # Shared message types and robot adapter contract
-├── go2_bringup/              # Go2 hardware adapter (go2_hw_bridge) + launch files
-├── robot_nav/                # Robot-agnostic Nav2 + slam_toolbox config/launch
-├── robot_safety/             # Safety-stop placeholder
-├── sensor_models/            # Reusable Gazebo sensor xacro macros (L1 LiDAR)
-├── go2_sim/                  # Go2 Gazebo simulation URDF (planar_move + L1 LiDAR + IMU)
-├── sim_worlds/               # World files + SDF obstacle models
-├── sim_scenarios/            # Runtime obstacle spawn/remove CLI + scenario manager
-├── d1_sim/                   # AgiBot D1 Ultra simulation stub (TODO(agibot))
-└── robot_sim/                # Simulation bringup launch (sim_bringup.launch.py)
+LiDAR (/lidar/points_filtered)
+        │
+        ▼
+┌─────────────────────────────┐
+│  FixedGaussianGridMap        │  10 m × 10 m grid centred on robot
+│  (rebuilt every replan tick) │  P(obstacle) = 1 − Φ(d_min / σ)
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│  AStarPlanner                │  8-connected grid search
+│  Rolling-horizon local goal  │  Soft + hard obstacle cost
+└─────────────┬───────────────┘
+              │  /a_star/path  (nav_msgs/Path)
+              ▼
+┌─────────────────────────────┐
+│  MPCTracker                  │  N=30, dt=0.1 s  →  3 s horizon
+│  2-D kinematic model         │  CasADi/IPOPT solver
+│  Logistic obstacle barrier   │
+└─────────────┬───────────────┘
+              │  /mpc/next_setpoint  (geometry_msgs/PoseStamped)
+              ▼
+         Go2 controller
 ```
 
-### TF tree (full chain)
+---
+
+## How It Works
+
+### Stage 1 — Gaussian Occupancy Grid
+
+`FixedGaussianGridMap` builds a square grid (default 10 m × 10 m, 0.25 m/cell) centred on the robot every replanning tick.  
+For each cell, the occupancy probability is:
 
 ```
-map  ──(slam_toolbox)──►  odom  ──(go2_hw_bridge)──►  base_footprint
-                                                             └─(URDF)─►  base_link
-                                                                              ├──►  lidar_link
-                                                                              └──►  imu_link
+P(cell) = 1 − Φ(d_min / σ)
 ```
 
-### Data flow
+where `d_min` is the distance to the nearest LiDAR point inside the grid and `σ` is the Gaussian spread (default 0.4 m).  
+The map is rebuilt from scratch on every tick — no accumulation across steps.
+
+### Stage 2 — Rolling-Horizon A*
+
+`AStarPlanner` runs a standard A\* on the occupancy grid with an 8-connected neighbourhood.
+
+**Local goal selection:**
+- If the global goal lies *inside* the current grid, A\* targets it directly.
+- If the global goal is *outside* the grid, the planner intersects the ray (robot → goal) with the grid boundary and targets that boundary cell.  
+  This lets the robot advance toward a distant goal one grid-width at a time.
+
+**Cost function:**
+```
+g(n→n') = move_cost × reso × (1 + w_obs × P(n'))
+```
+Cells above `obstacle_threshold` (default 0.5) are treated as hard obstacles (infinite cost).  
+Cells below the threshold incur a soft cost proportional to their occupancy probability, pushing the path away from obstacles.
+
+### Stage 3 — 2-D Kinematic MPC
+
+`MPCTracker` solves a nonlinear program (NLP) over a 3-second horizon using CasADi/IPOPT.
+
+#### Dynamics model
+
+The Go2 is treated as a **holonomic kinematic robot** — it can be commanded with body-frame velocities in any direction (forward, lateral, yaw):
 
 ```
-Go2 hardware
-  │
-  ├── /sportmodestate  [SportModeState, ~50 Hz]
-  │       └──►  go2_hw_bridge  ──►  /odom + TF(odom→base_footprint)
-  │
-  └── /unilidar/cloud  [PointCloud2]
-          ├──►  pointcloud_to_laserscan  ──►  /scan
-          │         └──►  slam_toolbox  ──►  /map + TF(map→odom)
-          └──►  Nav2 costmaps (obstacle layer, direct PointCloud2)
-
-Nav2  ──►  /cmd_vel  [Twist]
-               └──►  go2_hw_bridge  ──►  /api/sport/request  ──►  Go2 hardware
+State:   x = [px, py, yaw]       (3-D)
+Control: u = [vx, vy, ω]         (body-frame velocities)
 ```
+
+World-frame propagation via rotation matrix R(yaw):
+
+```
+px_{k+1}  = px_k + (vx_k · cos(yaw_k) − vy_k · sin(yaw_k)) · dt
+py_{k+1}  = py_k + (vx_k · sin(yaw_k) + vy_k · cos(yaw_k)) · dt
+yaw_{k+1} = yaw_k + ω_k · dt
+```
+
+Forward Euler integration (dt = 0.1 s).
+
+#### Objective function
+
+```
+J = Σ_{k=0}^{N-1} [ eₖᵀ Q eₖ  +  uₖᵀ R uₖ  +  R_jerk ‖Δuₖ‖²  +  J_obs(xₖ) ]
+    + e_N^T Q_T e_N  +  J_obs(x_N)
+```
+
+| Term | Weight | Purpose |
+|---|---|---|
+| `eₖᵀ Q eₖ` | Q_xy=20, Q_yaw=0.5 | Track A\* reference path |
+| `uₖᵀ R uₖ` | R_vel=1.0, R_ω=0.5 | Penalise control effort |
+| `R_jerk ‖Δuₖ‖²` | 0.2 | Smooth velocity transitions |
+| `J_obs` | 500 per point | Repel from obstacles |
+| Terminal `Q_T` | 50 × Q | Drive to end of horizon |
+
+#### Obstacle avoidance barrier
+
+For each LiDAR point `p_j` and predicted state `x_k`:
+
+```
+J_obs(x_k, p_j) = W / (1 + exp(α · (dist(x_k, p_j) − r)))
+```
+
+- `W = 500`, `α = 8` (steepness), `r = 0.8 m` (safety radius)  
+- Non-zero gradient everywhere — IPOPT always has a slope to climb away from obstacles even before the safety boundary is reached  
+- Bounded — no infeasibility if the robot starts inside `r`
+
+Up to 15 nearest LiDAR points within 3 m are used per solve; the rest are replaced with far sentinels so the NLP structure never changes between calls.
+
+#### Reference trajectory
+
+A reference `x_ref[k]` is built by advancing along the A\* path at `v_ref = 0.5 m/s` from the closest waypoint to the robot.  
+At each step `k`, the reference position is linearly interpolated along the path arc, and the reference yaw is the tangent direction of the segment.
+
+#### Setpoint selection
+
+After solving, the node walks the predicted trajectory `x_pred[0..N]` and picks the first predicted state that is at least `lookahead_dist = 0.5 m` away from the robot.  
+If the entire horizon stays closer (near-goal case), it steers toward the last A\* waypoint directly.
+
+---
+
+## ROS 2 Interface
+
+### `a_star_node`
+
+| Direction | Topic | Type | Description |
+|---|---|---|---|
+| Sub | `/go2/pose` | `PoseStamped` | Robot pose |
+| Sub | `/lidar/points_filtered` | `PointCloud2` | LiDAR hits (world frame) |
+| Sub | `/global_goal` | `PoseStamped` | Runtime goal override |
+| Pub | `/a_star/path` | `Path` | Local A\* waypoint path |
+| Pub | `/a_star/local_goal` | `PoseStamped` | Current local grid target |
+| Pub | `/a_star/occupancy_grid` | `OccupancyGrid` | Gaussian map (Foxglove) |
+| Pub | `/a_star/grid_raw` | `Float32MultiArray` | Raw grid + metadata |
+
+### `mpc_node`
+
+| Direction | Topic | Type | Description |
+|---|---|---|---|
+| Sub | `/go2/pose` | `PoseStamped` | Robot pose |
+| Sub | `/lidar/points_filtered` | `PointCloud2` | LiDAR hits (world frame) |
+| Sub | `/a_star/path` | `Path` | A\* path |
+| Pub | `/mpc/next_setpoint` | `PoseStamped` | Lookahead setpoint for controller |
+| Pub | `/mpc/predicted_path` | `Path` | Full N-step predicted trajectory |
+| Pub | `/mpc/diagnostics` | `Float64MultiArray` | `[success, cost, solve_ms, avg_ms, fails]` |
+
+---
+
+## Parameters (`config/planner_params.yaml`)
+
+### A* node
+
+| Parameter | Default | Description |
+|---|---|---|
+| `grid_reso` | 0.25 m | Cell size |
+| `grid_half_width` | 5.0 m | Half-extent of local grid |
+| `grid_std` | 0.4 m | Gaussian spread σ |
+| `obstacle_threshold` | 0.5 | Hard obstacle cutoff |
+| `obstacle_cost_weight` | 10.0 | Soft cost multiplier |
+| `replan_rate_hz` | 2.0 | Replanning frequency |
+| `goal_reached_radius` | 0.3 m | Stop replanning within this distance |
+| `max_lidar_range` | 6.0 m | LiDAR range filter (from robot) |
+
+### MPC node
+
+| Parameter | Default | Description |
+|---|---|---|
+| `mpc_N` | 30 | Prediction horizon steps |
+| `mpc_dt` | 0.1 s | Step duration (horizon = 3 s) |
+| `mpc_rate_hz` | 2.0 | Solve frequency |
+| `mpc_vx_max` | 1.0 m/s | Max forward velocity |
+| `mpc_vy_max` | 0.5 m/s | Max lateral velocity |
+| `mpc_omega_max` | 1.5 rad/s | Max yaw rate |
+| `mpc_v_ref` | 0.5 m/s | Reference cruise speed |
+| `mpc_Q_xy` | 20.0 | Position tracking weight |
+| `mpc_Q_yaw` | 0.5 | Yaw tracking weight |
+| `mpc_Q_terminal` | 50.0 | Terminal cost multiplier |
+| `mpc_W_obs_sigmoid` | 500.0 | Obstacle barrier weight |
+| `mpc_obs_alpha` | 8.0 | Barrier steepness [1/m] |
+| `mpc_obs_r` | 0.8 m | Safety radius |
+| `mpc_lookahead_dist` | 0.5 m | Setpoint lookahead distance |
 
 ---
 
 ## Dependencies
 
-All packages are in this workspace — no upstream workspace needed at runtime.
-
-| Dependency | Install |
-|---|---|
-| ROS 2 Humble base | `apt install ros-humble-ros-base` |
-| Nav2 | `apt install ros-humble-navigation2 ros-humble-nav2-bringup` |
-| slam_toolbox (LGPL-2.1) | `apt install ros-humble-slam-toolbox` |
-| pointcloud_to_laserscan (BSD-3-Clause) | `apt install ros-humble-pointcloud-to-laserscan` |
-| robot_state_publisher, xacro | `apt install ros-humble-robot-state-publisher ros-humble-xacro` |
-| nlohmann/json (MIT) | `apt install nlohmann-json3-dev` |
-| rviz2 | `apt install ros-humble-rviz2` |
-
-> **Assumption A1:** The Go2 robot's internal ROS2 bridge is running and publishing:
-> - `/sportmodestate` — `unitree_go/SportModeState` (proprioceptive state, ~50 Hz)
-> - `/lowstate` — `unitree_go/LowState` (low-level state; used for battery data)
-> - `/unilidar/cloud` — `sensor_msgs/PointCloud2` (3D LiDAR)
->
-> `/lowstate` is used only for battery reporting in `RobotStatus`.  If the bridge
-> does not publish it, navigation still works but `battery_soc` and `battery_voltage`
-> in `/robot_status` will read 0.
->
-> **Assumption A2:** The Go2 bridge subscribes to `/api/sport/request` for motion commands.
->
-> **Assumption A3:** `slam_toolbox` is LGPL-2.1.  Under dynamic linking (colcon default),
-> this is compatible with proprietary application code.
-
-### SLAM Choice Rationale
-
-**slam_toolbox** (LGPL-2.1) was selected over alternatives because:
-- Native integration with Nav2 lifecycle and map server
-- Supports online mapping **and** map-serialise-then-localise workflow
-- Async mode decouples scan processing from the Nav2 control loop
-- Loop closure for long-session reliability in industrial environments
-- Actively maintained as part of the Nav2 ecosystem
-- LGPL-2.1 is compatible with industrial deployment via dynamic linking
+- ROS 2 (Humble or Foxy)
+- `casadi` — symbolic NLP formulation
+- `ipopt` — interior-point NLP solver
+- `numpy`, `scipy`
+- `sensor_msgs_py`
 
 ---
 
-## How to Build
+## Build & Run
 
 ```bash
-# Install system dependencies
-sudo apt install \
-    ros-humble-navigation2 ros-humble-nav2-bringup \
-    ros-humble-slam-toolbox \
-    ros-humble-pointcloud-to-laserscan \
-    ros-humble-robot-state-publisher ros-humble-xacro \
-    ros-humble-rviz2 \
-    nlohmann-json3-dev
-
 # Build
-source /opt/ros/humble/setup.bash
-cd /ws/anubi
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cd ~/go2/anubi
+colcon build --packages-select a_star_mpc_planner
 source install/setup.bash
+
+# Run A* node
+ros2 run a_star_mpc_planner a_star_node \
+  --ros-args -p goal_x:=10.0 -p goal_y:=5.0
+
+# Run MPC node
+ros2 run a_star_mpc_planner mpc_node
+
+# Override goal at runtime
+ros2 topic pub /global_goal geometry_msgs/PoseStamped \
+  "{pose: {position: {x: 10.0, y: 5.0, z: 0.0}}}"
 ```
 
 ---
 
-## How to Run on a Real Go2
+## File Overview
 
-### Step 1 — Start the Go2 internal bridge on the robot
-
-The Unitree Go2 internal software must publish:
-- `/sportmodestate`  (`unitree_go/SportModeState`)
-- `/unilidar/cloud`  (`sensor_msgs/PointCloud2`)
-
-And subscribe to:
-- `/api/sport/request`  (`unitree_api/Request`)
-
-Refer to the Unitree Go2 ROS 2 SDK documentation for activating the bridge.
-
-### Step 2 — Map the environment (first time only)
-
-```bash
-source /opt/ros/humble/setup.bash
-source /ws/anubi/install/setup.bash
-
-# Launch in mapping mode (default)
-ros2 launch go2_bringup go2_bringup.launch.py slam_mode:=mapping
-
-# Drive the robot around manually to build the map, then save it:
-ros2 service call /slam_toolbox/serialize_map \
-    slam_toolbox/srv/SerializePoseGraph \
-    "{filename: '/ws/anubi/src/robot_nav/maps/my_map'}"
 ```
-
-### Step 3 — Navigate with a saved map
-
-```bash
-ros2 launch go2_bringup go2_bringup.launch.py \
-    slam_mode:=localization \
-    map:=/ws/anubi/src/robot_nav/maps/my_map
+a_star_mpc_planner/
+├── a_star_node.py        — ROS 2 node: LiDAR → grid → A* → /a_star/path
+├── mpc_node.py           — ROS 2 node: path + LiDAR → MPC → setpoint
+├── a_star_planner.py     — Pure A* algorithm on occupancy grid
+├── mpc_tracker.py        — CasADi/IPOPT MPC, dynamics, NLP build
+├── gaussian_grid_map.py  — Fixed Gaussian occupancy grid map
+└── config/
+    └── planner_params.yaml
 ```
-
-### Step 4 — Send a goal in RViz
-
-1. RViz opens automatically (set `rviz:=false` to disable).
-2. Click **"2D Goal Pose"** in the toolbar.
-3. Click + drag on the map to set position and orientation.
-4. The robot plans a path and drives autonomously.
-
-### Optional — Mapping mode without goal (SLAM only, no navigation)
-
-```bash
-ros2 launch go2_bringup go2_bringup.launch.py slam_mode:=mapping rviz:=true
-```
-
----
-
-## How to Port to AgiBot D1 Ultra
-
-1. Create `agibot_d1_bringup` package, mirroring `go2_bringup`.
-2. Implement `d1_hw_bridge.cpp`:
-   - Subscribe to the D1 Ultra state topic → publish `/odom` + TF `odom → base_footprint`
-   - Subscribe to `/cmd_vel` → convert to D1 Ultra motion API
-3. Create `agibot_d1_description` with the same frame names: `base_footprint`, `base_link`, `lidar_link`, `imu_link`.
-4. Create `agibot_d1_bringup/config/d1_params.yaml` with D1-specific topic names.
-5. Use `go2_bringup/launch/go2_bringup.launch.py` as a template.
-6. **Zero changes** required in `robot_nav`, `slam_toolbox_params.yaml`, or `robot_common_interfaces`.
-
----
-
-## How to Run in Gazebo Simulation
-
-The simulation layer is fully implemented. **No hardware required.**
-The Gazebo `libgazebo_ros_planar_move` plugin replaces `go2_hw_bridge`,
-providing the identical `/cmd_vel` + `/odom` + TF interface to Nav2.
-
-```bash
-source /opt/ros/humble/setup.bash
-source /ws/anubi/install/setup.bash
-
-# Full simulation — mapping mode, with GUI and RViz
-ros2 launch robot_sim sim_bringup.launch.py
-
-# Warehouse world, localization with a saved map, no GUI
-ros2 launch robot_sim sim_bringup.launch.py \
-    world:=$(ros2 pkg prefix sim_worlds)/share/sim_worlds/worlds/warehouse.world \
-    slam_mode:=localization \
-    map:=/ws/anubi/src/robot_nav/maps/my_map \
-    gui:=false
-```
-
-### Runtime obstacle management
-
-```bash
-# Spawn a crate at (2, 1)
-ros2 run sim_scenarios spawn_obstacle \
-    --name box_1 --model obstacle_box --x 2.0 --y 1.0 --z 0.5
-
-# Delete it
-ros2 run sim_scenarios spawn_obstacle --delete box_1
-
-# Load a pre-defined scenario (crowded_room or narrow_corridor)
-ros2 run sim_scenarios scenario_manager \
-    --ros-args -p scenario_file:=crowded_room
-
-# Restart Nav2 without restarting Gazebo
-ros2 launch robot_sim sim_nav.launch.py
-```
-
-### Known simulation limits
-
-- Gazebo Classic 11 (EOL Jan 2025) — functional on Ubuntu 22.04 / Humble, no new patches.
-  Port to Gazebo Fortress (`ros_gz`) when long-term maintenance is required.
-- Robot locomotion uses `libgazebo_ros_planar_move` (holonomic approximation, no leg dynamics).
-- AgiBot D1 Ultra sim (`d1_sim/`) is a stub — chassis dimensions are placeholders.
-
----
-
-## Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| `go2_hw_bridge` single node for both odom and cmd_vel | Minimal Go2-specific surface area |
-| `SportModeState` → `odom/TF` (not Point-LIO) | Self-contained; Go2's internal state estimator is accurate short-term; slam_toolbox corrects long-term drift |
-| `pointcloud_to_laserscan` → slam_toolbox | slam_toolbox needs 2D scan; Nav2 costmaps still use full 3D cloud |
-| `odom → base_footprint` (not base_link) | Standard Nav2 2D convention; slam_toolbox tracks `base_footprint` |
-| cmd_vel watchdog (0.5 s) | Stops robot if Nav2 crashes; prevents runaway |
-| nlohmann/json (system package, MIT) | No vendoring; standard Go2 SDK serialisation format |
-| slam_toolbox LGPL-2.1 | Standard Nav2 SLAM; LGPL OK under dynamic linking |
-
----
-
-## TODO Markers in Code
-
-- `TODO(agibot)` — changes for AgiBot D1 Ultra porting (implement `d1_sim/urdf/d1_sim.urdf.xacro` and `agibot_d1_bringup`)
-- `TODO(sim)` — Gazebo plugin stubs remaining in `go2_description/urdf/go2.urdf.xacro` (hardware URDF); the simulation itself is fully working via `go2_sim/`
-- `TODO(safety)` — `tilt_monitor` node (IMU-based fall detection); `velocity_limiter` is already implemented
-- `TODO(localization)` — where to wire in map-based localization improvements
