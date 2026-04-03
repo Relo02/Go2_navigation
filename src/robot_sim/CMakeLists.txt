@@ -9,6 +9,7 @@ install(DIRECTORY launch config worlds rviz
 
 install(PROGRAMS
   scripts/cloud_self_filter.py
+  scripts/mock_nav_graph_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

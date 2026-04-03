@@ -1,1 +1,72 @@
-/anubi/src/go2_sim/config/ros_control.yaml
+# ros_control.yaml
+# ign_ros2_control joint controller configuration for the Unitree Go2.
+#
+# Source: khaledgabr77/unitree_go2_ros2 / unitree_go2_sim/config/ros_control/ros_control.yaml
+# Port change: no content change — controller types and gains are simulator-independent.
+# The ign_ros2_control plugin loads this file (specified in go2_sim.urdf.xacro robot_controllers arg).
+
+controller_manager:
+  ros__parameters:
+    use_sim_time: true
+    update_rate: 250  # Hz
+
+    controller_manager_timeout: 10.0  # seconds
+
+    joint_states_controller:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_group_effort_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_states_controller:
+  ros__parameters:
+    use_sim_time: true
+
+joint_group_effort_controller:
+  ros__parameters:
+    use_sim_time: true
+    joints:
+        - lf_hip_joint
+        - lf_upper_leg_joint
+        - lf_lower_leg_joint
+        - rf_hip_joint
+        - rf_upper_leg_joint
+        - rf_lower_leg_joint
+        - lh_hip_joint
+        - lh_upper_leg_joint
+        - lh_lower_leg_joint
+        - rh_hip_joint
+        - rh_upper_leg_joint
+        - rh_lower_leg_joint
+
+    command_interfaces:
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+
+    allow_partial_joints_goal: true
+
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0
+
+    hold_trajectory_duration: 0.0
+    action_tolerance: 1.0
+
+    gains:
+      lf_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      lf_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      lf_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      rf_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      rf_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      rf_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      lh_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      lh_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      lh_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      rh_hip_joint        : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      rh_upper_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}
+      rh_lower_leg_joint  : {p: 100.0, i: 0.2, d: 1.0, i_clamp: 2.5}

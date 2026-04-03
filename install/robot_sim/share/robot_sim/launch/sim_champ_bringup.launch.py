@@ -38,14 +38,14 @@ from launch_ros.actions import Node
 def generate_launch_description():
     go2_sim_share = get_package_share_directory("go2_sim")
     robot_nav_share = get_package_share_directory("robot_nav")
-    a_star_mpc_share = get_package_share_directory("a_star_mpc_planner")
+    mpc_share = get_package_share_directory("mpc")
 
     default_world = os.path.join(go2_sim_share, "worlds", "default.sdf")
     default_ros_control = os.path.join(go2_sim_share, "config", "ros_control.yaml")
     default_slam_params = os.path.join(robot_nav_share, "config", "slam_toolbox_params.yaml")
     default_nav_params = os.path.join(robot_nav_share, "config", "nav2_params.yaml")
     default_rviz_config = os.path.join(robot_nav_share, "rviz", "nav2.rviz")
-    default_a_star_params = os.path.join(a_star_mpc_share, "config", "planner_params.yaml")
+    default_mpc_params = os.path.join(mpc_share, "config", "mpc_param.yaml")
 
     args = [
         DeclareLaunchArgument("use_sim_time", default_value="true"),
@@ -58,7 +58,7 @@ def generate_launch_description():
         DeclareLaunchArgument("world_init_z", default_value="0.375"),
         DeclareLaunchArgument("world_init_heading", default_value="0.0"),
         DeclareLaunchArgument("publish_map_to_odom_tf", default_value="false"),
-        DeclareLaunchArgument("start_nav", default_value="true"),
+        DeclareLaunchArgument("start_nav", default_value="false"),
         DeclareLaunchArgument("nav_delay_sec", default_value="8.0"),
         DeclareLaunchArgument("slam_mode", default_value="mapping"),
         DeclareLaunchArgument("map", default_value=""),
@@ -67,8 +67,8 @@ def generate_launch_description():
         DeclareLaunchArgument("launch_cloud_filter", default_value="true"),
         DeclareLaunchArgument("use_rviz", default_value="true"),
         DeclareLaunchArgument("rviz_config", default_value=default_rviz_config),
-        DeclareLaunchArgument("start_a_star_planner", default_value="false"),
-        DeclareLaunchArgument("a_star_planner_params", default_value=default_a_star_params),
+        DeclareLaunchArgument("start_wildos_planner", default_value="true"),
+        DeclareLaunchArgument("mpc_params", default_value=default_mpc_params),
     ]
 
     start_nav = LaunchConfiguration("start_nav")
@@ -156,36 +156,54 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("use_rviz")),
     )
 
-    # ---- A* MPC Planner ----
-    a_star_node = Node(
-        package="a_star_mpc_planner",
-        executable="a_star_node",
-        name="a_star_node",
+    # ---- WildOS graph planner + MPC ----
+    wildos_graphnav_planner = Node(
+        package="wildos_graphnav_planner",
+        executable="planner_node",
+        name="wildos_graphnav_planner",
         output="screen",
         parameters=[
-            LaunchConfiguration("a_star_planner_params"),
             {"use_sim_time": use_sim_time},
         ],
-        condition=IfCondition(LaunchConfiguration("start_a_star_planner")),
+        remappings=[
+            ("~/nav_graph", "/nav_graph"),
+            ("~/goal_pose", "/goal_pose"),
+            ("~/odom", "/odom/raw"),
+            ("~/path", "/wildos/path"),
+        ],
+        condition=IfCondition(LaunchConfiguration("start_wildos_planner")),
     )
 
     mpc_node = Node(
-        package="a_star_mpc_planner",
+        package="mpc",
         executable="mpc_node",
         name="mpc_node",
         output="screen",
         parameters=[
-            LaunchConfiguration("a_star_planner_params"),
+            LaunchConfiguration("mpc_params"),
             {"use_sim_time": use_sim_time},
         ],
-        condition=IfCondition(LaunchConfiguration("start_a_star_planner")),
+        condition=IfCondition(LaunchConfiguration("start_wildos_planner")),
+    )
+
+    setpoint_to_cmd_vel = Node(
+        package="mpc",
+        executable="setpoint_to_cmd_vel_node",
+        name="setpoint_to_cmd_vel_node",
+        output="screen",
+        parameters=[
+            LaunchConfiguration("mpc_params"),
+            {"use_sim_time": use_sim_time},
+        ],
+        condition=IfCondition(LaunchConfiguration("start_wildos_planner")),
     )
 
     return LaunchDescription(args + [
         champ_sim,
         cloud_self_filter,
         start_nav_stack,
-        a_star_node,
+        wildos_graphnav_planner,
         mpc_node,
+        setpoint_to_cmd_vel,
         rviz,
     ])

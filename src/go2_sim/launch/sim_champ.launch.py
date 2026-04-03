@@ -30,6 +30,7 @@ from launch_ros.actions import Node
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
+    ExecuteProcess,
     IncludeLaunchDescription,
     TimerAction,
     SetEnvironmentVariable,
@@ -117,6 +118,23 @@ def generate_launch_description():
         value_type=str,
     )
     robot_description = {"robot_description": robot_description_content}
+
+    # ── Kill any leftover Ignition Gazebo server from a previous run ──────────
+    # ign-gazebo-server persists in the container when the launch is interrupted.
+    # A stale server causes two problems on relaunch:
+    #   1. The robot entity already exists → spawn silently fails → wrong position.
+    #   2. controller_manager is still alive with controllers active → spawner
+    #      finds them "already loaded" and fails to configure them.
+    # pkill exits in <1 s; Ignition Gazebo takes 10+ s to start, so there is no
+    # race condition. Exit code is ignored (|| true) so launch does not abort when
+    # no old server is running.
+    kill_old_gazebo = ExecuteProcess(
+        cmd=['bash', '-c',
+             'pkill -f "ign-gazebo-server" 2>/dev/null; '
+             'pkill -f "ign-gazebo-gui"    2>/dev/null; '
+             'true'],
+        output='log',
+    )
 
     # ── Nodes ──────────────────────────────────────────────────────────────
 

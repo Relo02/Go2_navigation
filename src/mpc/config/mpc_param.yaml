@@ -1,0 +1,106 @@
+/**:
+  ros__parameters:
+    # ─────────────────────────────────────────────────────────────
+    # Goal handling
+    # ─────────────────────────────────────────────────────────────
+    wait_for_goal: true            # require runtime goal from RViz (/goal_pose)
+    goal_x: 5.0                    # used only when wait_for_goal=false
+    goal_y: 5.0
+    goal_z: 0.0
+
+    # ─────────────────────────────────────────────────────────────
+    # Sparse graph planning settings
+    # ─────────────────────────────────────────────────────────────
+    planning_extent_m: 5.0          # half-width of the local planning window [m]
+    graph_sample_spacing: 0.60      # sparse lattice spacing [m]
+    graph_connection_radius: 1.20   # max edge length [m]
+    graph_safety_margin: 0.35       # clearance enforced from obstacle points [m]
+    graph_obstacle_voxel: 0.20      # obstacle point downsampling [m]
+    graph_max_obstacles: 600        # cap obstacle points used per cycle
+    graph_goal_connect_radius: 1.5  # WildOS-style virtual-goal connection radius [m]
+    replan_rate_hz: 10.0            # graph refresh [Hz]
+    goal_reached_radius: 0.30       # stop replanning near goal
+    planning_height: 0.0
+
+    # ─────────────────────────────────────────────────────────────
+    # MPC horizon parameters
+    # ─────────────────────────────────────────────────────────────
+    mpc_N: 50                      # prediction horizon steps — 20×0.1=2s horizon.
+                                   # Reduced from 30: fewer steps → faster IPOPT solve,
+                                   # still enough to see obstacles within 0.6m reach.
+    mpc_dt: 0.1                    # time step [s]
+
+    # ─────────────────────────────────────────────────────────────
+    # Velocity constraints (2D kinematic model)
+    # Must match CHAMP gait.yaml limits — CHAMP silently clamps anything above:
+    #   max_linear_velocity_x: 0.3 m/s
+    #   max_linear_velocity_y: 0.25 m/s
+    #   max_angular_velocity_z: 0.5 rad/s
+    # If MPC plans at higher speeds the predictions are wrong (model mismatch).
+    # ─────────────────────────────────────────────────────────────
+    mpc_vx_max: 1.0                # max forward velocity [m/s]  — CHAMP hard limit
+    mpc_vy_max: 0.3               # max lateral velocity [m/s]  — CHAMP hard limit
+    mpc_omega_max: 0.5             # max angular velocity [rad/s] — CHAMP hard limit
+    mpc_v_ref: 0.25                # desired cruise speed [m/s]
+
+    # ─────────────────────────────────────────────────────────────
+    # Tracking cost weights
+    # ─────────────────────────────────────────────────────────────
+    mpc_Q_xy: 100.0                 # xy position tracking weight
+    mpc_Q_yaw: 1.0                  # yaw tracking weight (low — A* segments are jagged)
+    mpc_Q_terminal: 100.0          # terminal state weight multiplier
+
+    # ─────────────────────────────────────────────────────────────
+    # Control effort weights
+    # ─────────────────────────────────────────────────────────────
+    mpc_R_vel: 1.0                 # linear velocity control effort
+    mpc_R_omega: 0.5               # angular velocity control effort
+    mpc_R_jerk: 0.5                # smoothness — keep low so robot can turn
+
+    # ─────────────────────────────────────────────────────────────
+    # Obstacle avoidance (logistic sigmoid barrier)
+    # ─────────────────────────────────────────────────────────────
+    mpc_W_obs_sigmoid: 2.0       # obstacle barrier weight — lower = less slowdown near walls
+    mpc_obs_alpha: 4.0             # steepness
+    mpc_obs_r: 0.25                # safety radius [m].
+                                   # A* already blocks cells within 0.34m (grid_std=0.5,
+                                   # threshold=0.25). The MPC adds a thin extra margin so
+                                   # the sigmoid activates just outside the A* exclusion
+                                   # zone. Setting this to 0.75 caused the MPC cost to
+                                   # make any forward motion through corridors too expensive,
+                                   # leaving the robot standing still.
+    mpc_max_obs_constraints: 15    # N=20 × 15 obs = 300 hard constraints — affordable
+                                   # at 10 Hz. Covers wall geometry well enough.
+    mpc_obs_check_radius: 0.5      # range to search for obstacles [m]
+
+    # ─────────────────────────────────────────────────────────────
+    # IPOPT solver settings
+    # ─────────────────────────────────────────────────────────────
+    mpc_max_iter: 100              # max IPOPT iterations
+    mpc_warm_start: true           # use warm start from previous solution
+
+    # ─────────────────────────────────────────────────────────────
+    # MPC node settings
+    # ─────────────────────────────────────────────────────────────
+    mpc_rate_hz: 20.0               # IPOPT typically takes 20-100ms; 10Hz gives enough
+                                   # margin. velocity_limiter caps commands at 20Hz anyway
+                                   # so >20Hz MPC rate gives zero extra robot responsiveness.
+    mpc_lookahead_dist: 0.5        # distance to next setpoint [m].
+                                   # Must be < N*dt*vx_max = 50*0.1*0.3 = 1.5m.
+                                   # Was 2.0 → MPC horizon never reached it so the
+                                   # setpoint always fell back to the last A* waypoint
+                                   # 6m away, bypassing all MPC obstacle avoidance.
+    max_lidar_range: 20.0           # max lidar range [m]
+
+    # ─────────────────────────────────────────────────────────────
+    # Setpoint -> cmd_vel controller settings
+    # ─────────────────────────────────────────────────────────────
+    cmd_rate_hz: 50.0              # /cmd_vel publish frequency
+    cmd_kp_xy: 2.0                  # body-frame XY proportional gain
+    cmd_kp_yaw: 1.2                # yaw proportional gain
+    cmd_max_vx: 0.3                # forward speed clamp [m/s]  — matches CHAMP gait.yaml
+    cmd_max_vy: 0.25               # lateral speed clamp [m/s]  — matches CHAMP gait.yaml
+    cmd_max_omega: 0.5             # yaw-rate clamp [rad/s]     — matches CHAMP gait.yaml
+    cmd_stop_radius: 0.2           # stop when setpoint distance <= this [m]
+    setpoint_timeout_sec: 2.0      # tolerate EKF hiccups before zeroing cmd_vel
+    enable_yaw_control: true     # rotate to align with path direction

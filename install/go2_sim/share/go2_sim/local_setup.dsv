@@ -1,1 +1,2 @@
-/anubi/build/go2_sim/ament_cmake_environment_hooks/local_setup.dsv
+source;share/go2_sim/environment/ament_prefix_path.sh
+source;share/go2_sim/environment/path.sh

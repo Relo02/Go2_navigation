@@ -1,1 +1,33 @@
-/anubi/src/go2_sim/config/joints.yaml
+# joints.yaml
+# CHAMP joint map for the Unitree Go2.
+#
+# Source: khaledgabr77/unitree_go2_ros2 / unitree_go2_sim/config/joints/joints.yaml
+# Copied verbatim — joint names match the leg macro in leg.xacro.
+# The fourth joint per leg ({name}_foot_joint) is fixed and not controlled;
+# CHAMP uses it only for kinematic chain bookkeeping.
+/**:
+  ros__parameters:
+    joints_map:
+      left_front:
+        - lf_hip_joint
+        - lf_upper_leg_joint
+        - lf_lower_leg_joint
+        - lf_foot_joint
+
+      right_front:
+        - rf_hip_joint
+        - rf_upper_leg_joint
+        - rf_lower_leg_joint
+        - rf_foot_joint
+
+      left_hind:
+        - lh_hip_joint
+        - lh_upper_leg_joint
+        - lh_lower_leg_joint
+        - lh_foot_joint
+
+      right_hind:
+        - rh_hip_joint
+        - rh_upper_leg_joint
+        - rh_lower_leg_joint
+        - rh_foot_joint

@@ -8,8 +8,7 @@ Panels:
         - /RobotModel1
         - /TF1
         - /LiDAR1
-        - /Occupancy Grid1
-        - /A* Path1
+        - /Planner Path1
         - /MPC Predicted Path1
         - /Goal Pose1
         - /MPC Setpoint1
@@ -124,29 +123,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Value: true
 
-    # ── Gaussian occupancy grid ─────────────────────────────────────────────
-    - Alpha: 0.65
-      Class: rviz_default_plugins/Map
-      Color Scheme: costmap
-      Draw Behind: false
-      Enabled: true
-      Name: Occupancy Grid
-      Topic:
-        Depth: 1
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /a_star/occupancy_grid
-      Update Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /a_star/occupancy_grid_updates
-      Value: true
-      Use Timestamp: false
-
-    # ── A* path ────────────────────────────────────────────────────────────
+    # ── Planner path ───────────────────────────────────────────────────────
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -156,8 +133,8 @@ Visualization Manager:
       Head Length: 0.07000000029802322
       Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.05000000074505806
-      Name: A* Path
+      Line Width: 0.029999999329447746
+      Name: Planner Path
       Offset:
         X: 0
         Y: 0
@@ -165,14 +142,14 @@ Visualization Manager:
       Pose Color: 0; 200; 50
       Pose Style: None
       Radius: 0.029999999329447746
-      Shaft Diameter: 0.05000000074505806
+      Shaft Diameter: 0.029999999329447746
       Shaft Length: 0.10000000149011612
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /a_star/path
+        Value: /wildos/path
       Value: true
 
     # ── MPC predicted trajectory ───────────────────────────────────────────
@@ -185,7 +162,7 @@ Visualization Manager:
       Head Length: 0.07000000029802322
       Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.029999999329447746
+      Line Width: 0.02499999850988388
       Name: MPC Predicted Path
       Offset:
         X: 0
@@ -193,8 +170,8 @@ Visualization Manager:
         Z: 0
       Pose Color: 0; 120; 255
       Pose Style: None
-      Radius: 0.019999999552965164
-      Shaft Diameter: 0.029999999329447746
+      Radius: 0.02499999850988388
+      Shaft Diameter: 0.02499999850988388
       Shaft Length: 0.07000000029802322
       Topic:
         Depth: 5
@@ -225,7 +202,7 @@ Visualization Manager:
         Value: /mpc/next_setpoint
       Value: true
 
-    # ── A* local goal ──────────────────────────────────────────────────────
+    # ── Goal pose ──────────────────────────────────────────────────────────
     - Alpha: 1
       Axes Length: 0.4
       Axes Radius: 0.019999999552965164
@@ -243,7 +220,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /a_star/local_goal
+        Value: /goal_pose
       Value: true
 
   Enabled: true
@@ -268,9 +245,9 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /initialpose
-    # "2D Goal Pose" tool — click in the viewport to set a new A* goal.
+    # "2D Goal Pose" tool — click in the viewport to set a new goal.
     # Publishes geometry_msgs/PoseStamped on /goal_pose, which the launch
-    # file remaps to /global_goal consumed by a_star_node.
+    # file remaps to the WildOS planner consumed by the MPC stack.
     - Class: rviz_default_plugins/SetGoal
       Topic:
         Depth: 5
@@ -299,7 +276,7 @@ Visualization Manager:
       Name: Current View
       Near Clip Distance: 0.009999999776482582
       Scale: 40.0
-      Target Frame: base_link
+      Target Frame: map
       Value: TopDownOrtho (rviz_default_plugins)
       X: 0
       Y: 0
