@@ -1,1 +1,0 @@
-robot_state_publisher;xacro;ros_ign_bridge;ros_ign_gazebo;ign_ros2_control;joint_trajectory_controller;joint_state_broadcaster;controller_manager;pointcloud_to_laserscan;robot_safety;champ_base;robot_localization;tf2_ros;sensor_models

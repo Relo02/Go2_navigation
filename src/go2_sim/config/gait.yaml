@@ -9,8 +9,8 @@
       knee_orientation : ">>"
       pantograph_leg : false
       odom_scaler: 0.9
-      max_linear_velocity_x : 0.3
-      max_linear_velocity_y : 0.25
+      max_linear_velocity_x : 1.5   # before: 0.3
+      max_linear_velocity_y : 1.0  # before: 0.25
       max_angular_velocity_z : 0.5
       com_x_translation: 0.0
       swing_height : 0.04

@@ -1,3 +1,5 @@
-build/
-install/
-log/
+# ROS 2 / colcon outputs
+/build/
+/install/
+/log/
+/external/

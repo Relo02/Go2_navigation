@@ -140,7 +140,11 @@ def generate_launch_description():
         executable="odom_to_pose_node",
         name="odom_to_pose_node",
         output="screen",
-        parameters=[{"use_sim_time": use_sim_time}],
+        parameters=[{
+            "use_sim_time": use_sim_time,
+            "cmd_max_vx": 1.5,  # matches CHAMP gait.yaml
+            "cmd_max_vy": 1.0,  # matches CHAMP gait.yaml
+            }],
     )
 
     # ── 3. Point-cloud self-filter ──────────────────────────────────────────
@@ -253,7 +257,11 @@ def generate_launch_description():
         name="setpoint_to_cmd_vel_node",
         output="screen",
         condition=IfCondition(LaunchConfiguration("use_path_follower")),
-        parameters=[{"use_sim_time": use_sim_time}],
+        parameters=[{
+            "use_sim_time": use_sim_time,
+            "cmd_max_vx": 1.5,   # m/s — stay below CHAMP gait.yaml max (1.5) for smooth tracking
+            "cmd_max_vy": 1.0,   # m/s — stay below CHAMP gait.yaml max (1.0) for smooth tracking
+        }],
         remappings=[
             ("/mpc/next_setpoint", "/path_follower/next_setpoint"),
         ],

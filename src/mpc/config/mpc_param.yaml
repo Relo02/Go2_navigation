@@ -98,8 +98,8 @@
     cmd_rate_hz: 50.0              # /cmd_vel publish frequency
     cmd_kp_xy: 2.0                  # body-frame XY proportional gain
     cmd_kp_yaw: 1.2                # yaw proportional gain
-    cmd_max_vx: 0.3                # forward speed clamp [m/s]  — matches CHAMP gait.yaml
-    cmd_max_vy: 0.25               # lateral speed clamp [m/s]  — matches CHAMP gait.yaml
+    cmd_max_vx: 1.5                # forward speed clamp [m/s]  — matches CHAMP gait.yaml
+    cmd_max_vy: 1.0                # lateral speed clamp [m/s]  — matches CHAMP gait.yaml
     cmd_max_omega: 0.5             # yaw-rate clamp [rad/s]     — matches CHAMP gait.yaml
     cmd_stop_radius: 0.2           # stop when setpoint distance <= this [m]
     setpoint_timeout_sec: 2.0      # tolerate EKF hiccups before zeroing cmd_vel
