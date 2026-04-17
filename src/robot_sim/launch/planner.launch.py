@@ -73,14 +73,13 @@ def generate_launch_description():
     default_world = os.path.join(go2_sim_share, "worlds", "default.sdf")
     default_ros_control = os.path.join(go2_sim_share, "config", "ros_control.yaml")
 
-    # ── Launch arguments ────────────────────────────────────────────────────
+    # -- Launch arguments ----------------------------------------------------
 
     args = [
         # Simulation
         DeclareLaunchArgument("use_sim_time", default_value="true"),
         DeclareLaunchArgument("world", default_value=default_world),
-        DeclareLaunchArgument("gui", default_value="true",
-                              description="Launch Gazebo GUI"),
+        DeclareLaunchArgument("gui", default_value="true", description="Launch Gazebo GUI"),
         DeclareLaunchArgument("robot_name", default_value="go2"),
         DeclareLaunchArgument("ros_control_file", default_value=default_ros_control),
         DeclareLaunchArgument("world_init_x", default_value="0.0"),
@@ -88,37 +87,127 @@ def generate_launch_description():
         DeclareLaunchArgument("world_init_z", default_value="0.375"),
         DeclareLaunchArgument("world_init_heading", default_value="0.0"),
 
-        DeclareLaunchArgument("wp_lookahead_dist", default_value="2.0",
-                      description="Path follower lookahead distance in meters"),
-        DeclareLaunchArgument("path_timeout", default_value="1.0",
-                      description="Drop stale paths older than this many seconds"),
+        DeclareLaunchArgument(
+            "wp_lookahead_dist",
+            default_value="2.0",
+            description="Path follower lookahead distance in meters",
+        ),
+        DeclareLaunchArgument(
+            "path_timeout",
+            default_value="10.0",
+            description="Drop stale paths older than this many seconds",
+        ),
+        DeclareLaunchArgument(
+            "cloud_min_ray_elevation_deg",
+            default_value="3.0",
+            description=(
+                "Reject lidar returns below this downward elevation angle (deg). "
+                "Lower values keep more lower obstacle points."
+            ),
+        ),
+        DeclareLaunchArgument(
+            "cloud_min_world_z",
+            default_value="0.12",
+            description=(
+                "Drop points below this world Z threshold (m). "
+                "Lower values keep obstacle bases while still removing floor."
+            ),
+        ),
 
-        # Cloud filter delay — give Gazebo time to publish the first scan
-        DeclareLaunchArgument("planner_delay_sec", default_value="15.0",
-                              description="Seconds to wait before starting planner nodes"),
-        DeclareLaunchArgument("use_mock_nav_graph", default_value="true",
-                      description="Publish fallback NavigationGraph for simulation"),
-        DeclareLaunchArgument("use_wildos_planner", default_value="true",
-                  description="Enable WildOS graph planner"),
-        DeclareLaunchArgument("use_path_follower", default_value="true",
-              description="Enable path follower tracking node"),
+        # Bringup timing
+        DeclareLaunchArgument(
+            "planner_delay_sec",
+            default_value="15.0",
+            description="Seconds to wait before starting planner nodes",
+        ),
+        DeclareLaunchArgument(
+            "motion_delay_sec",
+            default_value="32.0",
+            description="Seconds to wait before starting motion command nodes",
+        ),
+        DeclareLaunchArgument(
+            "use_mock_nav_graph",
+            default_value="true",
+            description="Publish fallback NavigationGraph for simulation",
+        ),
+        DeclareLaunchArgument(
+            "use_wildos_planner",
+            default_value="true",
+            description="Enable WildOS graph planner",
+        ),
+        DeclareLaunchArgument(
+            "use_mpc_controller",
+            default_value="false",
+            description="Use mpc_node for trajectory tracking and cmd_vel output",
+        ),
+        DeclareLaunchArgument(
+            "use_path_follower",
+            default_value="true",
+            description="Enable path follower tracking node",
+        ),
+        DeclareLaunchArgument(
+            "use_mpc_path_optimizer",
+            default_value="false",
+            description="Enable MPC path optimization from /wildos/path to /wildos/path_safe",
+        ),
+        DeclareLaunchArgument(
+            "path_follower_path_topic",
+            default_value="/wildos/path",
+            description="Path topic consumed by controllers",
+        ),
+        DeclareLaunchArgument(
+            "mpc_path_horizon_points",
+            default_value="25",
+            description="MPC path optimizer horizon length in points",
+        ),
+        DeclareLaunchArgument(
+            "mpc_path_safety_clearance",
+            default_value="0.45",
+            description="Obstacle clearance target (m) for MPC path optimization",
+        ),
+        DeclareLaunchArgument(
+            "mpc_path_curvature_weight",
+            default_value="30.0",
+            description="Curvature suppression weight for MPC path optimization",
+        ),
+        DeclareLaunchArgument(
+            "mpc_path_obstacle_weight",
+            default_value="180.0",
+            description="Obstacle barrier weight for MPC path optimization",
+        ),
+        DeclareLaunchArgument(
+            "cmd_max_vx",
+            default_value="0.3",
+            description="Max forward speed sent to /cmd_vel (m/s)",
+        ),
+        DeclareLaunchArgument(
+            "cmd_max_vy",
+            default_value="0.12",
+            description="Max lateral speed sent to /cmd_vel (m/s)",
+        ),
 
-        # Visualisation
+        # Visualization
         DeclareLaunchArgument("use_rviz", default_value="false"),
-        DeclareLaunchArgument("rviz_config",
-                              default_value=os.path.join(
-                                  robot_sim_share, "rviz", "a_star_mpc.rviz"),
-                              description="RViz2 config file"),
+        DeclareLaunchArgument(
+            "rviz_delay_sec",
+            default_value="6.0",
+            description="Seconds to wait before starting RViz",
+        ),
+        DeclareLaunchArgument(
+            "rviz_config",
+            default_value=os.path.join(robot_sim_share, "rviz", "a_star_mpc.rviz"),
+            description="RViz2 config file",
+        ),
     ]
 
     use_sim_time = LaunchConfiguration("use_sim_time")
     planner_delay = LaunchConfiguration("planner_delay_sec")
+    motion_delay = LaunchConfiguration("motion_delay_sec")
+    rviz_delay = LaunchConfiguration("rviz_delay_sec")
 
-    # ── 1. Base simulation (Gazebo + CHAMP + EKF) ───────────────────────────
+    # -- 1. Base simulation (Gazebo + CHAMP + EKF) --------------------------
     champ_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(go2_sim_share, "launch", "sim_champ.launch.py")
-        ),
+        PythonLaunchDescriptionSource(os.path.join(go2_sim_share, "launch", "sim_champ.launch.py")),
         launch_arguments={
             "use_sim_time": use_sim_time,
             "rviz": "false",
@@ -134,7 +223,7 @@ def generate_launch_description():
         }.items(),
     )
 
-    # ── 2. Odometry -> PoseStamped bridge ───────────────────────────────────
+    # -- 2. Odometry -> PoseStamped bridge ----------------------------------
     odom_to_pose = Node(
         package="mpc",
         executable="odom_to_pose_node",
@@ -142,12 +231,12 @@ def generate_launch_description():
         output="screen",
         parameters=[{
             "use_sim_time": use_sim_time,
-            "cmd_max_vx": 1.5,  # matches CHAMP gait.yaml
-            "cmd_max_vy": 1.0,  # matches CHAMP gait.yaml
-            }],
+            "cmd_max_vx": 1.5,
+            "cmd_max_vy": 1.0,
+        }],
     )
 
-    # ── 3. Point-cloud self-filter ──────────────────────────────────────────
+    # -- 3. Point-cloud self-filter -----------------------------------------
     cloud_self_filter = Node(
         package="robot_sim",
         executable="cloud_self_filter.py",
@@ -164,12 +253,12 @@ def generate_launch_description():
             "lidar_roll": 0.0,
             "lidar_pitch": 0.0,
             "lidar_yaw": 0.0,
-            "min_ray_elevation_deg": 10.0,
-            "min_world_z": 0.20,
+            "min_ray_elevation_deg": LaunchConfiguration("cloud_min_ray_elevation_deg"),
+            "min_world_z": LaunchConfiguration("cloud_min_world_z"),
         }],
     )
 
-    # ── 4. Optional fallback nav-graph publisher (simulation) ──────────────
+    # -- 4. Optional fallback nav-graph publisher ---------------------------
     mock_nav_graph_publisher = Node(
         package="robot_sim",
         executable="mock_nav_graph_publisher.py",
@@ -178,22 +267,16 @@ def generate_launch_description():
         parameters=[{
             "use_sim_time": use_sim_time,
             "graph_frame_id": "odom",
-            # In open space, update graph slower to reduce /wildos/path jitter.
             "far_publish_period_sec": 1.6,
-            # Near obstacles, update faster for responsiveness.
             "near_publish_period_sec": 0.45,
             "near_obstacle_dist_m": 1.1,
             "far_motion_threshold_m": 0.20,
-            # Penalise graph nodes near obstacles so Dijkstra routes around walls.
-            # The MPC then handles fine-grained avoidance within the clear corridor.
-            # 0.0 disabled this entirely, causing the path to go straight through walls
-            # and the MPC hard constraint to freeze the robot in place.
             "obstacle_cost_scale": 20.0,
         }],
         condition=IfCondition(LaunchConfiguration("use_mock_nav_graph")),
     )
 
-    # ── 5. WildOS graph planner ─────────────────────────────────────────────
+    # -- 5. WildOS graph planner --------------------------------------------
     wildos_graphnav_planner = Node(
         package="wildos_graphnav_planner",
         executable="planner_node",
@@ -201,7 +284,6 @@ def generate_launch_description():
         output="screen",
         parameters=[{
             "use_sim_time": use_sim_time,
-            # Hold frontier preference longer to avoid path flipping.
             "path_smoothness_period": 20.0,
             "local_frontier_radius": 9.0,
         }],
@@ -214,42 +296,64 @@ def generate_launch_description():
         ],
     )
 
-    # ── 6. Path follower tracker ───────────────────────────────────────────
-    # mpc_node = Node(
-    #     package="mpc",
-    #     executable="mpc_node",
-    #     name="mpc_node",
-    #     output="screen",
-    #     condition=IfCondition(LaunchConfiguration("use_mpc")),
-    #     parameters=[
-    #         mpc_params,
-    #         {"use_sim_time": use_sim_time},
-    #     ],
-    #     remappings=[
-    #         ("/go2/pose", "/go2/pose"),
-    #         ("/lidar/points_filtered", "/lidar/points_filtered"),
-    #     ],
-    # )
-
+    # -- 6. Controllers ------------------------------------------------------
     path_follower_node = Node(
         package="path_follower",
         executable="path_follower_node",
         name="path_follower_node",
         output="screen",
         condition=IfCondition(LaunchConfiguration("use_path_follower")),
-        parameters=[
-            {
-                "use_sim_time": use_sim_time,
-                "wp_lookahead_dist": LaunchConfiguration("wp_lookahead_dist"),
-                "path_timeout": LaunchConfiguration("path_timeout"),
-            }
-        ],
+        parameters=[{
+            "use_sim_time": use_sim_time,
+            "wp_lookahead_dist": LaunchConfiguration("wp_lookahead_dist"),
+            "path_timeout": LaunchConfiguration("path_timeout"),
+        }],
         remappings=[
-            ("~/path", "/wildos/path"),
+            ("~/path", LaunchConfiguration("path_follower_path_topic")),
             ("~/odom", "/odom/raw"),
             ("~/goal_pose", "/path_follower/next_setpoint"),
         ],
     )
+
+    # mpc_path_optimizer_node = Node(
+    #     package="mpc",
+    #     executable="mpc_path_optimizer_node",
+    #     name="mpc_path_optimizer_node",
+    #     output="screen",
+    #     condition=IfCondition(LaunchConfiguration("use_mpc_path_optimizer")),
+    #     parameters=[{
+    #         "input_path_topic": "~/path_in",
+    #         "output_path_topic": "~/path_out",
+    #         "obstacle_cloud_topic": "~/obstacles",
+    #         "horizon_points": LaunchConfiguration("mpc_path_horizon_points"),
+    #         "obs_clearance": LaunchConfiguration("mpc_path_safety_clearance"),
+    #         "w_curvature": LaunchConfiguration("mpc_path_curvature_weight"),
+    #         "w_obs": LaunchConfiguration("mpc_path_obstacle_weight"),
+    #     }],
+    #     remappings=[
+    #         ("~/path_in", "/wildos/path"),
+    #         ("~/path_out", "/wildos/path_safe"),
+    #         ("~/obstacles", "/lidar/points_filtered"),
+    #     ],
+    # )
+
+    # mpc_controller_node = Node(
+    #     package="mpc",
+    #     executable="mpc_node",
+    #     name="mpc_node",
+    #     output="screen",
+    #     condition=IfCondition(LaunchConfiguration("use_mpc_controller")),
+    #     parameters=[{
+    #         "use_sim_time": use_sim_time,
+    #         "cmd_max_vx": LaunchConfiguration("cmd_max_vx"),
+    #         "cmd_max_vy": LaunchConfiguration("cmd_max_vy"),
+    #     }],
+    #     remappings=[
+    #         ("/wildos/path", LaunchConfiguration("path_follower_path_topic")),
+    #         ("/lidar/points_filtered", "/lidar/points_filtered"),
+    #         ("/go2/pose", "/go2/pose"),
+    #     ],
+    # )
 
     setpoint_to_cmd_vel = Node(
         package="mpc",
@@ -259,18 +363,14 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("use_path_follower")),
         parameters=[{
             "use_sim_time": use_sim_time,
-            "cmd_max_vx": 1.5,   # m/s — stay below CHAMP gait.yaml max (1.5) for smooth tracking
-            "cmd_max_vy": 1.0,   # m/s — stay below CHAMP gait.yaml max (1.0) for smooth tracking
+            "cmd_max_vx": LaunchConfiguration("cmd_max_vx"),
+            "cmd_max_vy": LaunchConfiguration("cmd_max_vy"),
         }],
         remappings=[
             ("/mpc/next_setpoint", "/path_follower/next_setpoint"),
         ],
     )
 
-    # Delay navigation startup so Gazebo is fully initialised and publishing.
-    # NOTE: MPC launch is intentionally disabled here and replaced by
-    # path_follower_node, which publishes rolling setpoints consumed by
-    # setpoint_to_cmd_vel_node to produce /cmd_vel.
     planner_bringup = TimerAction(
         period=planner_delay,
         actions=[
@@ -278,12 +378,19 @@ def generate_launch_description():
             cloud_self_filter,
             mock_nav_graph_publisher,
             wildos_graphnav_planner,
+            # mpc_path_optimizer_node,
+        ],
+    )
+
+    motion_bringup = TimerAction(
+        period=motion_delay,
+        actions=[
+            # mpc_controller_node,
             path_follower_node,
             setpoint_to_cmd_vel,
         ],
     )
 
-    # ── 7. RViz2 (optional) ─────────────────────────────────────────────────
     rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -294,9 +401,14 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("use_rviz")),
     )
 
-    # ── Launch description ──────────────────────────────────────────────────
+    rviz_bringup = TimerAction(
+        period=rviz_delay,
+        actions=[rviz],
+    )
+
     return LaunchDescription(args + [
         champ_sim,
         planner_bringup,
-        rviz,
+        motion_bringup,
+        rviz_bringup,
     ])

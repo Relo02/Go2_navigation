@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mpc_node = mpc.mpc_node:main',
+            'mpc_path_optimizer_node = mpc.mpc_path_optimizer_node:main',
             'odom_to_pose_node = mpc.odom_to_pose_node:main',
             'setpoint_to_cmd_vel_node = mpc.setpoint_to_cmd_vel_node:main',
         ],
