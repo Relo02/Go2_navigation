@@ -13,18 +13,18 @@
     # ─────────────────────────────────────────────────────────────
     grid_reso: 0.25                # local grid cell size [m]
     grid_half_width: 5.0           # local map is 10 m x 10 m
-    grid_std: 0.05               # Gaussian spread [m]; must satisfy 1-CDF(d,0,std)>=threshold for d>0
-    obstacle_threshold: 0.45       # hard-obstacle cutoff (must be <0.5 to ever trigger)
-    obstacle_cost_weight: 8.0      # soft obstacle penalty
-    replan_rate_hz: 10.0           # A* refresh [Hz] — increased to match MPC for continuous adaptation
+    grid_std: 0.2                 # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
+    obstacle_threshold: 0.16       # = 1-Φ(1σ): blocks every cell within 0.30 m of any obstacle
+    obstacle_cost_weight: 100.0     # high penalty so any faint inflation is more expensive than a detour
+    replan_rate_hz: 1.0            # lower refresh reduces path flicker while staying reactive
     goal_reached_radius: 0.30      # stop replanning near goal
     planning_height: 0.0
 
     # ─────────────────────────────────────────────────────────────
     # MPC horizon parameters
     # ─────────────────────────────────────────────────────────────
-    mpc_N: 30                    # prediction horizon steps
-    mpc_dt: 0.10                   # time step [s] — 20×0.1=2s horizon
+    mpc_N: 50                    # prediction horizon steps
+    mpc_dt: 0.10                   # time step [s] — 50×0.1=5s horizon
 
     # ─────────────────────────────────────────────────────────────
     # Velocity constraints (2D kinematic model)
@@ -37,21 +37,21 @@
     # ─────────────────────────────────────────────────────────────
     # Tracking cost weights
     # ─────────────────────────────────────────────────────────────
-    mpc_Q_xy: 200.0                 # xy position tracking weight
-    mpc_Q_yaw: 1.0                  # yaw tracking weight (low — A* segments are jagged)
-    mpc_Q_terminal: 100.0          # terminal state weight multiplier
+    mpc_Q_xy: 100.0                 # xy position tracking weight
+    mpc_Q_yaw: 0.1                  # yaw tracking weight (low — A* segments are jagged)
+    mpc_Q_terminal: 10.0          # terminal state weight multiplier
 
     # ─────────────────────────────────────────────────────────────
     # Control effort weights
     # ─────────────────────────────────────────────────────────────
-    mpc_R_vel: 1.0                 # linear velocity control effort
+    mpc_R_vel: 10.0                # linear velocity control effort
     mpc_R_omega: 0.5               # angular velocity control effort
-    mpc_R_jerk: 0.5                # smoothness — keep low so robot can turn
+    mpc_R_jerk: 1.0                # stronger penalty on control-rate change for smoother motion
 
     # ─────────────────────────────────────────────────────────────
     # Obstacle avoidance (logistic sigmoid barrier)
     # ─────────────────────────────────────────────────────────────
-    mpc_W_obs_sigmoid: 200.0       # reduced from 500 to avoid solver spikes
+    mpc_W_obs_sigmoid: 50.0       # reduced from 500 to avoid solver spikes
     mpc_obs_alpha: 4.0             # lower steepness => better conditioning
     mpc_obs_r: 0.55                # safety radius [m]
     mpc_max_obs_constraints: 12    # fewer constraints improves robustness
@@ -66,19 +66,38 @@
     # ─────────────────────────────────────────────────────────────
     # MPC node settings
     # ─────────────────────────────────────────────────────────────
-    mpc_rate_hz: 10.0               # faster than 10 Hz; aligns with watchdog timing
-    mpc_lookahead_dist: 2.0        # distance to next setpoint [m]
+    mpc_rate_hz: 10.0              # MPC solve frequency [Hz]
+    mpc_lookahead_dist: 1.2        # shorter lookahead reduces aggressive corner cutting
     max_lidar_range: 6.0           # max lidar range [m]
+    mpc_path_resample_ds: 0.15     # denser path resampling before MPC [m]
+    mpc_path_smooth_window: 7      # odd moving-average window on resampled path
+    mpc_setpoint_alpha: 0.20       # stronger low-pass on published MPC setpoint
+    mpc_setpoint_max_step: 0.20    # max setpoint jump per MPC cycle [m]
+    mpc_setpoint_reset_dist: 1.25  # reset filter only for large path topology jumps [m]
+
+    # ─────────────────────────────────────────────────────────────
+    # MPC security protocol (escape from inflated obstacle space)
+    # ─────────────────────────────────────────────────────────────
+    # If the robot's occupancy probability reaches this threshold the
+    # security protocol activates.  Should be <= obstacle_threshold (0.45)
+    # so it triggers before the A* hard-obstacle cutoff.
+    mpc_security_threshold: 0.25   # triggers at d≈0.20 m from obstacle (inside A* hard boundary)
+    # BFS search radius [m]: how far to look for a free cell to escape to.
+    mpc_security_escape_radius: 3.0
 
     # ─────────────────────────────────────────────────────────────
     # Setpoint -> cmd_vel controller settings
     # ─────────────────────────────────────────────────────────────
     cmd_rate_hz: 20.0              # /cmd_vel publish frequency
-    cmd_kp_xy: 2.0                  # body-frame XY proportional gain
-    cmd_kp_yaw: 1.2                # yaw proportional gain
+    cmd_kp_xy: 1.2                 # body-frame XY proportional gain
+    cmd_kp_yaw: 0.8                # yaw proportional gain
     cmd_max_vx: 0.8                # forward speed clamp [m/s]
-    cmd_max_vy: 0.25               # lateral speed clamp [m/s]
-    cmd_max_omega: 1.0             # yaw-rate clamp [rad/s]
+    cmd_max_vy: 0.30               # lateral speed clamp [m/s]
+    cmd_max_omega: 0.8             # yaw-rate clamp [rad/s]
     cmd_stop_radius: 0.2           # stop when setpoint distance <= this [m]
     setpoint_timeout_sec: 2.0      # tolerate EKF hiccups before zeroing cmd_vel
-    enable_yaw_control: true     # rotate to align with path direction
+    enable_yaw_control: true       # rotate to align with path direction
+    cmd_smoothing_alpha: 0.35      # low-pass on cmd_vel stream
+    cmd_max_ax: 1.0                # max x acceleration for cmd smoothing [m/s^2]
+    cmd_max_ay: 0.8                # max y acceleration for cmd smoothing [m/s^2]
+    cmd_max_alpha: 1.5             # max yaw acceleration for cmd smoothing [rad/s^2]

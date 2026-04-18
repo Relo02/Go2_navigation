@@ -24,6 +24,9 @@ author: Lorenzo Ortolani (adapted for Go2)
 """
 
 import math
+from collections import deque
+from typing import Optional
+
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -35,6 +38,7 @@ from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Float64MultiArray
 
+from a_star_mpc_planner.gaussian_grid_map import FixedGaussianGridMap
 from a_star_mpc_planner.mpc_tracker import MPCConfig, MPCTracker
 
 
@@ -85,6 +89,14 @@ class MPCNode(Node):
         self.declare_parameter('mpc_path_smooth_window', 5)
         self.declare_parameter('mpc_setpoint_alpha', 0.35)
         self.declare_parameter('mpc_setpoint_max_step', 0.30)
+        self.declare_parameter('mpc_setpoint_reset_dist', 1.25)
+
+        # Security protocol parameters
+        self.declare_parameter('grid_reso',                  0.25)
+        self.declare_parameter('grid_half_width',            5.0)
+        self.declare_parameter('grid_std',                   0.2)
+        self.declare_parameter('mpc_security_threshold',     0.35)
+        self.declare_parameter('mpc_security_escape_radius', 3.0)
 
         # ── MPCConfig ─────────────────────────────────────────────────
         cfg = MPCConfig(
@@ -110,12 +122,23 @@ class MPCNode(Node):
         )
         self._tracker = MPCTracker(config=cfg)
 
+        # ── Security protocol ─────────────────────────────────────────
+        self._security_threshold = float(self.get_parameter('mpc_security_threshold').value)
+        self._security_escape_radius = float(self.get_parameter('mpc_security_escape_radius').value)
+        self._grid = FixedGaussianGridMap(
+            reso=float(self.get_parameter('grid_reso').value),
+            half_width=float(self.get_parameter('grid_half_width').value),
+            std=float(self.get_parameter('grid_std').value),
+        )
+        self._security_mode: bool = False
+
         self._max_lidar_range = float(self.get_parameter('max_lidar_range').value)
         self._lookahead_dist  = float(self.get_parameter('mpc_lookahead_dist').value)
         self._path_resample_ds = float(self.get_parameter('mpc_path_resample_ds').value)
         self._path_smooth_window = int(self.get_parameter('mpc_path_smooth_window').value)
         self._setpoint_alpha = float(self.get_parameter('mpc_setpoint_alpha').value)
         self._setpoint_max_step = float(self.get_parameter('mpc_setpoint_max_step').value)
+        self._setpoint_reset_dist = float(self.get_parameter('mpc_setpoint_reset_dist').value)
 
         # ── State ─────────────────────────────────────────────────────
         self._pose: PoseStamped | None = None
@@ -192,10 +215,11 @@ class MPCNode(Node):
 
     def _path_cb(self, msg: Path):
         """
-        Store A* path and reset setpoint filter to enable true online replanning.
-        
-        New path means A* has replanned based on robot's current position and sensors.
-        We MUST reset the filtered setpoint to avoid stale steering commands.
+        Store the latest A* path.
+
+        We keep the setpoint filter state across normal replans to avoid jitter.
+        Reset happens only when the new path jumps too far from current filtered
+        setpoint (e.g. new goal / large topological change).
         """
         if msg.poses:
             raw_path = [
@@ -203,17 +227,31 @@ class MPCNode(Node):
                 for p in msg.poses
             ]
             self._a_star_path_raw_len = len(raw_path)
-            self._a_star_path = self._smooth_resample_path(raw_path)
-            
-            # CRITICAL: Reset setpoint filter when new path arrives
-            # This breaks continuity on purpose to ensure we track the LATEST plan
-            # without lag from old setpoint filtering
-            self._setpoint_filtered_xy = None
-            self._setpoint_filtered_yaw = None
-            
+            smoothed_path = self._smooth_resample_path(raw_path)
+            self._a_star_path = smoothed_path
+
+            # Keep filter continuity unless the new path is a large jump.
+            did_reset = False
+            if self._setpoint_filtered_xy is None or self._setpoint_filtered_yaw is None:
+                did_reset = True
+            else:
+                idx = 1 if len(smoothed_path) > 1 else 0
+                path_anchor_xy = np.array([
+                    float(smoothed_path[idx][0]),
+                    float(smoothed_path[idx][1]),
+                ], dtype=float)
+                jump = float(np.linalg.norm(path_anchor_xy - self._setpoint_filtered_xy))
+                if jump > self._setpoint_reset_dist:
+                    did_reset = True
+
+            if did_reset:
+                self._setpoint_filtered_xy = None
+                self._setpoint_filtered_yaw = None
+
             self.get_logger().info(
                 f'[MPC] Received NEW A* path: {len(raw_path)} raw points → '
-                f'{len(self._a_star_path)} resampled points (reset setpoint filter)',
+                f'{len(self._a_star_path)} resampled points '
+                f'| reset_filter={did_reset}',
                 throttle_duration_sec=1.0,
             )
         else:
@@ -271,6 +309,48 @@ class MPCNode(Node):
         z = float(path_xyz[-1][2])
         return [(float(p[0]), float(p[1]), z) for p in pts]
 
+    def _find_escape_target(
+        self,
+        grid: FixedGaussianGridMap,
+        robot_xy: np.ndarray,
+    ) -> Optional[np.ndarray]:
+        """
+        BFS over the occupancy grid starting from the robot's cell to find the
+        nearest cell whose occupancy probability is below security_threshold.
+        Returns the world-frame (x, y) of that cell, or None if not found within
+        security_escape_radius.
+        """
+        ix0, iy0 = grid.world_to_index(float(robot_xy[0]), float(robot_xy[1]))
+        if ix0 is None:
+            return None
+
+        visited: set = set()
+        queue: deque = deque()
+        queue.append((ix0, iy0))
+        visited.add((ix0, iy0))
+
+        while queue:
+            ix, iy = queue.popleft()
+            if float(grid.gmap[ix, iy]) < self._security_threshold:
+                wx, wy = grid.index_to_world(ix, iy)
+                return np.array([wx, wy], dtype=float)
+            for dix in (-1, 0, 1):
+                for diy in (-1, 0, 1):
+                    if dix == 0 and diy == 0:
+                        continue
+                    nix, niy = ix + dix, iy + diy
+                    if (nix, niy) in visited:
+                        continue
+                    if not (0 <= nix < grid.cells and 0 <= niy < grid.cells):
+                        continue
+                    wx, wy = grid.index_to_world(nix, niy)
+                    if np.hypot(wx - robot_xy[0], wy - robot_xy[1]) > self._security_escape_radius:
+                        continue
+                    visited.add((nix, niy))
+                    queue.append((nix, niy))
+
+        return None
+
     def _solve_cb(self):
         """Solve MPC and publish results."""
         if self._pose is None or self._a_star_path is None:
@@ -289,12 +369,56 @@ class MPCNode(Node):
         if self._lidar_points is not None and len(self._lidar_points) > 0:
             obs_2d = self._lidar_points[:, :2]
 
+        # ── Security protocol: detect inflated-obstacle collision ────
+        in_inflated = False
+        escape_target: Optional[np.ndarray] = None
+        occ_at_robot = 0.0
+        if self._lidar_points is not None and len(self._lidar_points) > 0:
+            self._grid.update(self._lidar_points, state[:2])
+            occ_at_robot = self._grid.get_probability(float(state[0]), float(state[1]))
+            if occ_at_robot >= self._security_threshold:
+                in_inflated = True
+                escape_target = self._find_escape_target(self._grid, state[:2])
+
+        # Detect mode transition to reset warm-start and setpoint filter
+        prev_security = self._security_mode
+        self._security_mode = in_inflated
+        if in_inflated and not prev_security:
+            self._tracker._prev_u = None
+            self._tracker._prev_x = None
+            self._setpoint_filtered_xy = None
+            self._setpoint_filtered_yaw = None
+
+        # Choose path: escape straight-line or normal A* path
+        mpc_path = self._a_star_path
+        if in_inflated:
+            z = float(self._a_star_path[-1][2]) if self._a_star_path else 0.0
+            if escape_target is not None:
+                mpc_path = [
+                    (float(state[0]), float(state[1]), z),
+                    (float(escape_target[0]), float(escape_target[1]), z),
+                ]
+                self.get_logger().warn(
+                    f'[MPC-SECURITY] Robot inside inflated obstacle zone! '
+                    f'occ={occ_at_robot:.3f} >= {self._security_threshold:.2f}. '
+                    f'Escape target: ({escape_target[0]:.2f}, {escape_target[1]:.2f})',
+                    throttle_duration_sec=0.5,
+                )
+            else:
+                self.get_logger().warn(
+                    f'[MPC-SECURITY] Robot inside inflated obstacle zone '
+                    f'(occ={occ_at_robot:.3f}) — no free cell found within '
+                    f'{self._security_escape_radius:.1f} m, holding A* path.',
+                    throttle_duration_sec=0.5,
+                )
+
         # Solve MPC
         result = self._tracker.solve(
             state,
-            self._a_star_path,
+            mpc_path,
             obstacle_points_2d=obs_2d,
         )
+        result.security_mode = in_inflated
 
         self._solve_count    += 1
         self._total_solve_ms += result.solve_time_ms
@@ -382,6 +506,7 @@ class MPCNode(Node):
                 f'solve={result.solve_time_ms:5.1f} ms '
                 f'avg={self._total_solve_ms / self._solve_count:5.1f} ms  '
                 f'fails={self._fail_count}  '
+                f'security={self._security_mode}  '
                 f'path_wpts={len(self._a_star_path)}(raw={self._a_star_path_raw_len})  '
                 f'lookahead_k={lookahead_idx}  '
                 f'robot=[{state[0]:.2f},{state[1]:.2f}] '
@@ -397,6 +522,7 @@ class MPCNode(Node):
             result.solve_time_ms,
             float(self._total_solve_ms / max(self._solve_count, 1)),
             float(self._fail_count),
+            float(1 if result.security_mode else 0),   # [5] security protocol active
         ]
         self._diagnostics_pub.publish(diag)
 

@@ -42,6 +42,10 @@ def _clamp(value: float, vmin: float, vmax: float) -> float:
     return max(vmin, min(vmax, value))
 
 
+def _clamp_delta(target: float, current: float, max_delta: float) -> float:
+    return current + _clamp(target - current, -max_delta, max_delta)
+
+
 class SetpointToCmdVelNode(Node):
 
     def __init__(self):
@@ -56,6 +60,10 @@ class SetpointToCmdVelNode(Node):
         self.declare_parameter('cmd_stop_radius', 0.2)
         self.declare_parameter('setpoint_timeout_sec', 1.0)
         self.declare_parameter('enable_yaw_control', False)
+        self.declare_parameter('cmd_smoothing_alpha', 0.35)
+        self.declare_parameter('cmd_max_ax', 1.0)
+        self.declare_parameter('cmd_max_ay', 0.8)
+        self.declare_parameter('cmd_max_alpha', 1.5)
 
         self._rate_hz = float(self.get_parameter('cmd_rate_hz').value)
         self._kp_xy = float(self.get_parameter('cmd_kp_xy').value)
@@ -66,11 +74,17 @@ class SetpointToCmdVelNode(Node):
         self._stop_radius = float(self.get_parameter('cmd_stop_radius').value)
         self._setpoint_timeout = float(self.get_parameter('setpoint_timeout_sec').value)
         self._enable_yaw_control = bool(self.get_parameter('enable_yaw_control').value)
+        self._cmd_smoothing_alpha = float(self.get_parameter('cmd_smoothing_alpha').value)
+        self._cmd_max_ax = float(self.get_parameter('cmd_max_ax').value)
+        self._cmd_max_ay = float(self.get_parameter('cmd_max_ay').value)
+        self._cmd_max_alpha = float(self.get_parameter('cmd_max_alpha').value)
 
         self._pose: PoseStamped | None = None
         self._yaw = 0.0
         self._setpoint: PoseStamped | None = None
         self._setpoint_rx_time = None
+        self._last_cmd = Twist()
+        self._has_last_cmd = False
 
         self.create_subscription(PoseStamped, '/go2/pose', self._pose_cb, 10)
         self.create_subscription(PoseStamped, '/mpc/next_setpoint', self._setpoint_cb, 10)
@@ -93,7 +107,30 @@ class SetpointToCmdVelNode(Node):
         self._setpoint_rx_time = self.get_clock().now()
 
     def _publish_zero(self):
+        self._has_last_cmd = False
+        self._last_cmd = Twist()
         self._cmd_pub.publish(Twist())
+
+    def _apply_cmd_smoothing(self, raw_cmd: Twist) -> Twist:
+        if not self._has_last_cmd:
+            self._last_cmd = raw_cmd
+            self._has_last_cmd = True
+            return raw_cmd
+
+        dt = max(1.0 / max(self._rate_hz, 1e-3), 1e-3)
+
+        vx_limited = _clamp_delta(raw_cmd.linear.x, self._last_cmd.linear.x, self._cmd_max_ax * dt)
+        vy_limited = _clamp_delta(raw_cmd.linear.y, self._last_cmd.linear.y, self._cmd_max_ay * dt)
+        wz_limited = _clamp_delta(raw_cmd.angular.z, self._last_cmd.angular.z, self._cmd_max_alpha * dt)
+
+        alpha = _clamp(self._cmd_smoothing_alpha, 0.0, 1.0)
+        smoothed = Twist()
+        smoothed.linear.x = (1.0 - alpha) * self._last_cmd.linear.x + alpha * vx_limited
+        smoothed.linear.y = (1.0 - alpha) * self._last_cmd.linear.y + alpha * vy_limited
+        smoothed.angular.z = (1.0 - alpha) * self._last_cmd.angular.z + alpha * wz_limited
+
+        self._last_cmd = smoothed
+        return smoothed
 
     def _control_cb(self):
         if self._pose is None or self._setpoint is None or self._setpoint_rx_time is None:
@@ -119,25 +156,28 @@ class SetpointToCmdVelNode(Node):
         dy_world = sy - py
         dist = math.hypot(dx_world, dy_world)
 
-        if dist <= self._stop_radius:
-            self._publish_zero()
-            return
-
         # World -> robot body frame (x forward, y left)
         ex = math.cos(self._yaw) * dx_world + math.sin(self._yaw) * dy_world
         ey = -math.sin(self._yaw) * dx_world + math.cos(self._yaw) * dy_world
 
-        cmd = Twist()
-        cmd.linear.x = _clamp(self._kp_xy * ex, -self._max_vx, self._max_vx)
-        cmd.linear.y = _clamp(self._kp_xy * ey, -self._max_vy, self._max_vy)
-        if self._enable_yaw_control:
+        raw_cmd = Twist()
+        if dist <= self._stop_radius:
+            raw_cmd.linear.x = 0.0
+            raw_cmd.linear.y = 0.0
+        else:
+            raw_cmd.linear.x = _clamp(self._kp_xy * ex, -self._max_vx, self._max_vx)
+            raw_cmd.linear.y = _clamp(self._kp_xy * ey, -self._max_vy, self._max_vy)
+
+        if self._enable_yaw_control and dist > self._stop_radius:
             # Use MPC-predicted yaw stored in setpoint orientation (path-aligned heading).
             q = self._setpoint.pose.orientation
             yaw_sp = _quat_to_yaw(q.x, q.y, q.z, q.w)
             yaw_err = _wrap_to_pi(yaw_sp - self._yaw)
-            cmd.angular.z = _clamp(self._kp_yaw * yaw_err, -self._max_omega, self._max_omega)
+            raw_cmd.angular.z = _clamp(self._kp_yaw * yaw_err, -self._max_omega, self._max_omega)
         else:
-            cmd.angular.z = 0.0
+            raw_cmd.angular.z = 0.0
+
+        cmd = self._apply_cmd_smoothing(raw_cmd)
 
         self._cmd_pub.publish(cmd)
 

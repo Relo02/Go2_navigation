@@ -109,7 +109,7 @@ def generate_launch_description():
         DeclareLaunchArgument("goal_z", default_value="0.0"),
 
         # Cloud filter delay — give Gazebo time to publish the first scan
-        DeclareLaunchArgument("planner_delay_sec", default_value="15.0",
+        DeclareLaunchArgument("planner_delay_sec", default_value="30.0",
                               description="Seconds to wait before starting planner nodes"),
 
         # Visualisation
@@ -145,6 +145,10 @@ def generate_launch_description():
             "world_init_z": LaunchConfiguration("world_init_z"),
             "world_init_heading": LaunchConfiguration("world_init_heading"),
             "publish_map_to_odom_tf": "true",
+            "enable_base_to_footprint_ekf": "false",
+            "footprint_base_frame": "base_link",
+            "enable_footprint_to_odom_ekf": "true",
+            "gazebo_odom_topic": "/odom/raw",
         }.items(),
     )
 
@@ -155,6 +159,9 @@ def generate_launch_description():
         name="odom_to_pose_node",
         output="screen",
         parameters=[{"use_sim_time": use_sim_time}],
+        remappings=[
+            ("/odom/raw", "/odom"),
+        ],
     )
 
     # ── 3. Point-cloud self-filter ──────────────────────────────────────────

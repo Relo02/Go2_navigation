@@ -107,6 +107,32 @@ def generate_launch_description():
             "Set false when SLAM/localization owns map->odom."
         ),
     )
+    declare_enable_base_to_footprint_ekf = DeclareLaunchArgument(
+        "enable_base_to_footprint_ekf",
+        default_value="true",
+        description=(
+            "Enable CHAMP base_to_footprint EKF. Disable for pure Gazebo odom."
+        ),
+    )
+    declare_footprint_base_frame = DeclareLaunchArgument(
+        "footprint_base_frame",
+        default_value="base_footprint",
+        description=(
+            "Base frame used by footprint_to_odom_ekf (base_footprint or base_link)."
+        ),
+    )
+    declare_enable_footprint_to_odom_ekf = DeclareLaunchArgument(
+        "enable_footprint_to_odom_ekf",
+        default_value="true",
+        description=(
+            "Enable CHAMP footprint_to_odom EKF. Disable to use raw Gazebo odometry only."
+        ),
+    )
+    declare_gazebo_odom_topic = DeclareLaunchArgument(
+        "gazebo_odom_topic",
+        default_value="/odom/raw",
+        description="ROS topic receiving Gazebo odometry bridge output.",
+    )
 
     # ── Robot description (processed at launch time by xacro) ──────────────
     robot_description_content = ParameterValue(
@@ -176,6 +202,7 @@ def generate_launch_description():
         executable="ekf_node",
         name="base_to_footprint_ekf",
         output="screen",
+        condition=IfCondition(LaunchConfiguration("enable_base_to_footprint_ekf")),
         parameters=[
             {"base_link_frame": "base_link"},
             {"use_sim_time": use_sim_time},
@@ -193,17 +220,18 @@ def generate_launch_description():
         executable="ekf_node",
         name="footprint_to_odom_ekf",
         output="screen",
+        condition=IfCondition(LaunchConfiguration("enable_footprint_to_odom_ekf")),
         parameters=[
             {"use_sim_time": use_sim_time},
-            {"base_link_frame": "base_footprint"},
+            {"base_link_frame": LaunchConfiguration("footprint_base_frame")},
             {"odom_frame": "odom"},
             {"world_frame": "odom"},
             {"publish_tf": True},
             {"frequency": 20.0},
             {"two_d_mode": True},
-            {"odom0": "odom/raw"},
-            {"odom0_config": [False, False, False,
-                              False, False, False,
+            {"odom0": LaunchConfiguration("gazebo_odom_topic")},
+            {"odom0_config": [True, True, False,
+                              False, False, True,
                               True, True, False,
                               False, False, True,
                               False, False, False]},
@@ -310,7 +338,7 @@ def generate_launch_description():
         remappings=[
             ("/world/default/model/go2/joint_state", "/joint_states"),
             ("/unilidar/cloud/points", "/lidar/points"),
-            ("/odom", "/odom/raw"),
+            ("/odom", LaunchConfiguration("gazebo_odom_topic")),
             ("/cmd_vel", "/cmd_vel_safe"),
         ],
     )
@@ -383,6 +411,10 @@ def generate_launch_description():
         declare_world_init_z,
         declare_world_init_heading,
         declare_publish_map_to_odom_tf,
+        declare_enable_base_to_footprint_ekf,
+        declare_footprint_base_frame,
+        declare_enable_footprint_to_odom_ekf,
+        declare_gazebo_odom_topic,
 
         # Gazebo + robot spawn
         ign_gazebo,

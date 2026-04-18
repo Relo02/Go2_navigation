@@ -96,6 +96,7 @@ class MPCResult:
     u_opt: np.ndarray               # (N,   3)  [vx, vy, omega]
     cost: float
     solve_time_ms: float
+    security_mode: bool = False     # True when security escape protocol is active
 
     @property
     def next_position(self) -> np.ndarray:

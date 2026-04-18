@@ -245,9 +245,10 @@ class AStarPlanner:
         Returns list of (ix, iy) from start to goal (inclusive),
         or None if no path exists.
         """
+        reso = grid_map.reso
         start = _Node(six, siy, 0.0, None)
         open_heap = []
-        heapq.heappush(open_heap, (self._h(six, siy, gix, giy), start))
+        heapq.heappush(open_heap, (self._h(six, siy, gix, giy, reso), start))
 
         # closed: (ix, iy) -> best g seen
         closed: dict[tuple, float] = {}
@@ -274,8 +275,8 @@ class AStarPlanner:
                     continue
 
                 cell_cost = self._cell_cost(grid_map, nix, niy)
-                ng = current.g + move_cost * grid_map.reso * cell_cost
-                h = self._h(nix, niy, gix, giy)
+                ng = current.g + move_cost * reso * cell_cost
+                h = self._h(nix, niy, gix, giy, reso)
 
                 neighbor = _Node(nix, niy, ng, current)
                 heapq.heappush(open_heap, (ng + h, neighbor))
@@ -301,9 +302,13 @@ class AStarPlanner:
         return 1.0 + self.obstacle_cost_weight * prob
 
     @staticmethod
-    def _h(ix: int, iy: int, gix: int, giy: int) -> float:
-        """Euclidean heuristic (admissible for uniform-cost grid)."""
-        return math.hypot(gix - ix, giy - iy)
+    def _h(ix: int, iy: int, gix: int, giy: int, reso: float = 1.0) -> float:
+        """
+        Admissible Euclidean heuristic.
+        Must be in the same units as the actual step cost (move_cost * reso * cell_cost).
+        Minimum cell_cost = 1.0, so h = reso * euclidean_cell_distance never overestimates.
+        """
+        return math.hypot(gix - ix, giy - iy) * reso
 
     @staticmethod
     def _extract_path(goal_node: _Node):

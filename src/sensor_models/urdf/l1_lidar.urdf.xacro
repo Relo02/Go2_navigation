@@ -54,7 +54,7 @@
   <xacro:macro name="l1_lidar" params="
       parent
       prefix
-      range_min:=0.8
+      range_min:=0.3
       range_max:=30.0
       *origin">
 
