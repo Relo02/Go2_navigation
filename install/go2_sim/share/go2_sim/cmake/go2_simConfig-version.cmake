@@ -1,1 +1,0 @@
-/anubi/build/go2_sim/ament_cmake_core/go2_simConfig-version.cmake
