@@ -288,8 +288,8 @@ All four nodes share a single parameter file loaded with `--params-file`.
 ## Build
 
 ```bash
-cd ~/go2/anubi
-colcon build --packages-select a_star_mpc_planner
+cd ~/Go2_navigation
+colcon build
 source install/setup.bash
 ```
 
