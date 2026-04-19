@@ -381,19 +381,19 @@ class MPCTracker:
         arc       = np.concatenate([[0.0], np.cumsum(seg_len)])
         total_arc = arc[-1]
 
-        # === KEY FIX: Find closest waypoint using forward-aware search ===
-        # This ensures true online replanning by always finding where the
-        # robot ACTUALLY is on the path, not maintaining a stale index
+        # Find closest path waypoint, biased toward the robot's forward hemisphere.
+        # Pure argmin picks behind-robot points when the path starts behind the robot
+        # (obstacle forces a detour), causing the reference to advance backward.
         robot_xy  = robot_state[:2]
+        robot_yaw = robot_state[2]
+        forward   = np.array([np.cos(robot_yaw), np.sin(robot_yaw)])
         distances = np.linalg.norm(path_xy - robot_xy, axis=1)
-        i_closest = int(np.argmin(distances))
-        
-        # Sanity check: if closest point is very far away, robot may have drifted
-        # from path (e.g., during obstacle avoidance). This is expected and OK.
-        # The MPC will naturally steer back toward the path.
-        closest_distance = distances[i_closest]
-        
-        s0 = arc[i_closest]  # Arc length at closest point
+        dot_fwd   = (path_xy - robot_xy) @ forward
+        # Penalise points behind the robot so the reference stays forward-facing
+        distances_biased = distances + np.where(dot_fwd < 0.0, 1e3, 0.0)
+        i_closest = int(np.argmin(distances_biased))
+
+        s0 = arc[i_closest]  # Arc length at closest forward point
 
         # IMPORTANT: First reference point should match robot's CURRENT state exactly
         # This ensures smooth online replanning without discontinuities

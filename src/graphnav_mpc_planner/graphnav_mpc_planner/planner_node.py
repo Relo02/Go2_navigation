@@ -74,6 +74,7 @@ class PlannerNode(Node):
         self._goal_pose: PoseStamped | None = None
         self._odom: Odometry | None = None
         self._latest_graph_header: Header | None = None
+        self._current_path_pts: list | None = None  # committed path waypoints
 
         # ── Subscribers ───────────────────────────────────────────────
         self.create_subscription(
@@ -113,6 +114,7 @@ class PlannerNode(Node):
             self.get_logger().info(f'✓ Received goal pose in frame "{msg.header.frame_id}"')
             self._goal_received = True
         self._goal_pose = msg
+        self._current_path_pts = None  # new goal → reset committed path
         self._replan()
 
     def _odom_cb(self, msg: Odometry):
@@ -185,6 +187,21 @@ class PlannerNode(Node):
             )
             return
 
+        # ── Path hysteresis: avoid flipping between equal-cost routes ──
+        # Only switch if new path takes the same first step OR is ≥15% shorter.
+        if self._current_path_pts is not None and len(self._current_path_pts) > 1 and len(path_pts) > 1:
+            new_len  = _path_length(path_pts)
+            old_len  = _path_length(self._current_path_pts)
+            # "Same branch" = second waypoint of new path is close to second of old path
+            same_branch = math.hypot(
+                path_pts[1][0] - self._current_path_pts[1][0],
+                path_pts[1][1] - self._current_path_pts[1][1],
+            ) < 1.5  # within 1.5 m (one grid cell)
+            if not same_branch and new_len >= old_len * 0.85:
+                path_pts = self._current_path_pts  # stay on committed route
+
+        self._current_path_pts = list(path_pts)
+
         # ── Build nav_msgs/Path ───────────────────────────────────────
         path_msg = Path()
         path_msg.header = self._latest_graph_header
@@ -217,6 +234,13 @@ class PlannerNode(Node):
 # ─────────────────────────────────────────────────────────────────────────────
 # Utilities
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _path_length(pts: list) -> float:
+    total = 0.0
+    for i in range(1, len(pts)):
+        total += math.hypot(pts[i][0] - pts[i-1][0], pts[i][1] - pts[i-1][1])
+    return total
+
 
 def _quat_to_yaw(qx: float, qy: float, qz: float, qw: float) -> float:
     siny = 2.0 * (qw * qz + qx * qy)

@@ -91,10 +91,10 @@ def generate_launch_description():
         DeclareLaunchArgument('graphnav_mpc_delay_sec',default_value='30.0',
                               description='Delay before starting the planner (lets the sim settle)'),
         DeclareLaunchArgument('graphnav_mpc_params',   default_value=default_mpc_params),
-        DeclareLaunchArgument('nav_graph_topic',       default_value='scored_nav_graph',
+        DeclareLaunchArgument('nav_graph_topic',       default_value='/scored_nav_graph',
                               description='NavigationGraph topic from external wildos stack'),
-        DeclareLaunchArgument('odom_topic',            default_value='odom'),
-        DeclareLaunchArgument('goal_pose_topic',       default_value='goal_pose'),
+        DeclareLaunchArgument('odom_topic',            default_value='/odom'),
+        DeclareLaunchArgument('goal_pose_topic',       default_value='/goal_pose'),
 
         # RViz
         DeclareLaunchArgument('use_rviz',              default_value='true'),
@@ -111,17 +111,21 @@ def generate_launch_description():
             os.path.join(go2_sim_share, 'launch', 'sim_champ.launch.py')
         ),
         launch_arguments={
-            'use_sim_time':          use_sim_time,
-            'rviz':                  'false',
-            'robot_name':            LaunchConfiguration('robot_name'),
-            'ros_control_file':      LaunchConfiguration('ros_control_file'),
-            'world':                 LaunchConfiguration('world'),
-            'gui':                   LaunchConfiguration('gui'),
-            'world_init_x':          LaunchConfiguration('world_init_x'),
-            'world_init_y':          LaunchConfiguration('world_init_y'),
-            'world_init_z':          LaunchConfiguration('world_init_z'),
-            'world_init_heading':    LaunchConfiguration('world_init_heading'),
-            'publish_map_to_odom_tf':LaunchConfiguration('publish_map_to_odom_tf'),
+            'use_sim_time':                  use_sim_time,
+            'rviz':                          'false',
+            'robot_name':                    LaunchConfiguration('robot_name'),
+            'ros_control_file':              LaunchConfiguration('ros_control_file'),
+            'world':                         LaunchConfiguration('world'),
+            'gui':                           LaunchConfiguration('gui'),
+            'world_init_x':                  LaunchConfiguration('world_init_x'),
+            'world_init_y':                  LaunchConfiguration('world_init_y'),
+            'world_init_z':                  LaunchConfiguration('world_init_z'),
+            'world_init_heading':            LaunchConfiguration('world_init_heading'),
+            'publish_map_to_odom_tf':        'true',
+            'enable_base_to_footprint_ekf':  'false',
+            'footprint_base_frame':          'base_link',
+            'enable_footprint_to_odom_ekf':  'true',
+            'gazebo_odom_topic':             '/odom/raw',
         }.items(),
     )
 
@@ -132,25 +136,17 @@ def generate_launch_description():
         name='cloud_self_filter',
         output='screen',
         parameters=[{
-            'use_sim_time':        use_sim_time,
-            'input_topic':         '/lidar/points',
-            'output_topic':        '/lidar/points_filtered',
-            'lidar_x':             0.28945,
-            'lidar_y':             0.0,
-            'lidar_z':             -0.046825,
-            'lidar_roll':          0.0,
-            'lidar_pitch':         0.0,
-            'lidar_yaw':           0.0,
-            'min_ray_elevation_deg': -45.0,  # Accept points at any elevation (relaxed)
-            'min_world_z':         -1.0,     # Accept points below ground (relaxed)
-            'min_radius':          0.05,     # Reject only very close points
-            'publish_in_world_frame': False,  # Keep points in sensor frame (easier to debug)
-            'stereo_cloud_topic':  '/stereo/points',
-            'stereo_min_radius':   0.30,
-            'stereo_max_range':    8.0,
-            'stereo_to_lidar_dx':  0.02445,
-            'stereo_to_lidar_dy': -0.06,
-            'stereo_to_lidar_dz': -0.16683,
+            'use_sim_time':          use_sim_time,
+            'input_topic':           '/lidar/points',
+            'output_topic':          '/lidar/points_filtered',
+            'lidar_x':               0.28945,
+            'lidar_y':               0.0,
+            'lidar_z':               -0.046825,
+            'lidar_roll':            0.0,
+            'lidar_pitch':           0.0,
+            'lidar_yaw':             0.0,
+            'min_ray_elevation_deg': 10.0,
+            'min_world_z':           0.20,
         }],
     )
 
@@ -181,7 +177,6 @@ def generate_launch_description():
         name='odom_to_pose_node',
         output='screen',
         parameters=[{'use_sim_time': use_sim_time}],
-        remappings=[('/odom', LaunchConfiguration('odom_topic'))],
         condition=IfCondition(LaunchConfiguration('start_cloud_filter')),
     )
 

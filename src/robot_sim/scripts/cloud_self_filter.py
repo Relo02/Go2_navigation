@@ -265,7 +265,7 @@ class CloudSelfFilter(Node):
         self._filtered_count += 1
         if self._filtered_count == 1:
             self.get_logger().info(
-                f'✓ Publishing filtered cloud to {self._pub.topic_name}: {len(filtered_points)} points'
+                f'✓ Publishing filtered cloud to {self._publisher.topic_name}: {len(filtered_points)} points'
             )
         elif self._filtered_count % 20 == 0:
             self.get_logger().debug(

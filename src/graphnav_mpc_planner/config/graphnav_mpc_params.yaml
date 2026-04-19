@@ -2,6 +2,15 @@
   ros__parameters:
 
     # ─────────────────────────────────────────────────────────────────
+    # Mock nav graph (simulation only — not used with real wildos graph)
+    # ─────────────────────────────────────────────────────────────────
+    graph_frame: "map"
+    grid_spacing: 1.0          # [m] node spacing — 1 m gives smoother paths than 2 m
+    grid_width: 12             # columns → covers 11 m in X
+    grid_height: 12            # rows    → covers 11 m in Y
+    obs_block_radius: 0.45     # [m] obstacle inflation radius for edge blocking (< spacing/2)
+
+    # ─────────────────────────────────────────────────────────────────
     # Graph planner (mirrors graphnav_planner C++ parameters)
     # ─────────────────────────────────────────────────────────────────
 
@@ -34,26 +43,26 @@
     mpc_vx_max: 1.0              # max forward velocity [m/s]
     mpc_vy_max: 0.5              # max lateral velocity [m/s]
     mpc_omega_max: 1.5           # max angular velocity [rad/s]
-    mpc_v_ref: 0.5               # desired cruise speed [m/s]
+    mpc_v_ref: 1.0               # desired cruise speed [m/s]
 
     # ─────────────────────────────────────────────────────────────────
     # Tracking cost weights
     # ─────────────────────────────────────────────────────────────────
-    mpc_Q_xy: 200.0              # XY position tracking weight
-    mpc_Q_yaw: 0.3               # yaw tracking weight (path-aligned heading)
-    mpc_Q_terminal: 50.0         # terminal state weight multiplier
+    mpc_Q_xy: 150.0             # XY position tracking weight
+    mpc_Q_yaw: 1.0               # yaw tracking weight (path-aligned heading)
+    mpc_Q_terminal: 30.0         # terminal state weight multiplier
 
     # ─────────────────────────────────────────────────────────────────
     # Control effort weights
     # ─────────────────────────────────────────────────────────────────
-    mpc_R_vel: 10.0              # linear velocity control effort
+    mpc_R_vel: 1.0               # linear velocity control effort
     mpc_R_omega: 0.5             # angular velocity effort
     mpc_R_jerk: 1.0              # smoothness: penalty on control-rate change
 
     # ─────────────────────────────────────────────────────────────────
     # Obstacle avoidance (logistic sigmoid barrier)
     # ─────────────────────────────────────────────────────────────────
-    mpc_W_obs_sigmoid: 50.0      # weight per obstacle point per step
+    mpc_W_obs_sigmoid: 80.0      # weight per obstacle point per step
     mpc_obs_alpha: 6.0           # logistic steepness [1/m]
     mpc_obs_r: 0.75              # safety radius [m]
     mpc_max_obs_constraints: 12  # LiDAR points used per solve (remainder → sentinels)
@@ -73,8 +82,8 @@
     max_lidar_range: 6.0         # max LiDAR range kept for obstacle building [m]
     mpc_path_resample_ds: 0.15   # resample spacing before feeding path to MPC [m]
     mpc_path_smooth_window: 7    # moving-average window on resampled path (odd)
-    mpc_setpoint_alpha: 0.20     # low-pass alpha on published MPC setpoint
-    mpc_setpoint_max_step: 0.20  # max setpoint jump per MPC cycle [m]
+    mpc_setpoint_alpha: 0.60     # low-pass alpha on published MPC setpoint
+    mpc_setpoint_max_step: 0.40  # max setpoint jump per MPC cycle [m]
     mpc_setpoint_reset_dist: 1.25 # reset filter if new path jumps farther than this [m]
 
     # ─────────────────────────────────────────────────────────────────
