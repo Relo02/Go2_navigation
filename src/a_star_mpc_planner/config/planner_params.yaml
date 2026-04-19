@@ -37,9 +37,9 @@
     # ─────────────────────────────────────────────────────────────
     # Tracking cost weights
     # ─────────────────────────────────────────────────────────────
-    mpc_Q_xy: 100.0                 # xy position tracking weight
+    mpc_Q_xy: 50.0                 # xy position tracking weight
     mpc_Q_yaw: 0.1                  # yaw tracking weight (low — A* segments are jagged)
-    mpc_Q_terminal: 10.0          # terminal state weight multiplier
+    mpc_Q_terminal: 20.0          # terminal state weight multiplier
 
     # ─────────────────────────────────────────────────────────────
     # Control effort weights
@@ -51,7 +51,7 @@
     # ─────────────────────────────────────────────────────────────
     # Obstacle avoidance (logistic sigmoid barrier)
     # ─────────────────────────────────────────────────────────────
-    mpc_W_obs_sigmoid: 50.0       # reduced from 500 to avoid solver spikes
+    mpc_W_obs_sigmoid: 10.0       # reduced from 500 to avoid solver spikes
     mpc_obs_alpha: 4.0             # lower steepness => better conditioning
     mpc_obs_r: 0.55                # safety radius [m]
     mpc_max_obs_constraints: 12    # fewer constraints improves robustness
