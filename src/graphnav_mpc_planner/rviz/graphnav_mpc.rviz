@@ -1,0 +1,442 @@
+Panels:
+  - Class: rviz_common/Displays
+    Help Height: 78
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /RobotModel1
+        - /LiDAR (filtered)1
+        - /Stereo Points1
+        - /SLAM Map1
+        - /GraphNav Planned Path1
+        - /MPC Predicted Path1
+        - /MPC Setpoint1
+        - /Navigation Goal1
+        - /Robot Odometry1
+        - /GraphNav Frontier Scores1
+        - /GraphNav Unexplored Map1
+      Splitter Ratio: 0.5
+    Tree Height: 900
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Tool Properties
+    Expanded:
+      - /2D Goal Pose1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz_common/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+
+Visualization Manager:
+  Class: ""
+  Displays:
+
+    # ── Reference grid ─────────────────────────────────────────────────────────
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.029999999329447746
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 30
+      Reference Frame: <Fixed Frame>
+      Value: true
+
+    # ── Robot model ────────────────────────────────────────────────────────────
+    - Alpha: 0.8
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0.1
+      Value: true
+      Visual Enabled: true
+
+    # ── TF frames (disabled by default — enable for debugging) ─────────────────
+    - Class: rviz_default_plugins/TF
+      Enabled: false
+      Frame Timeout: 30
+      Frames:
+        All Enabled: false
+        map:
+          Value: true
+        odom:
+          Value: true
+        base_footprint:
+          Value: true
+        base_link:
+          Value: true
+      Marker Scale: 0.5
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Update Interval: 0
+      Value: false
+
+    # ── LiDAR filtered point cloud ─────────────────────────────────────────────
+    # Source: cloud_self_filter node (/lidar/points -> /lidar/points_filtered)
+    - Alpha: 0.9
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 2
+        Min Value: -1
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 200; 200; 200
+      Color Transformer: AxisColor
+      Decay Time: 0
+      Enabled: true
+      Max Color: 255; 255; 255
+      Min Color: 50; 50; 200
+      Name: LiDAR (filtered)
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 2
+      Size (m): 0.019999999552965164
+      Style: Points
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /lidar/points_filtered
+      Use Fixed Frame: true
+      Value: true
+
+    # ── Stereo camera point cloud (disabled by default) ────────────────────────
+    - Alpha: 0.7
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 5
+        Min Value: 0
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 200; 120; 50
+      Color Transformer: AxisColor
+      Decay Time: 0
+      Enabled: false
+      Max Color: 255; 180; 80
+      Min Color: 80; 40; 0
+      Name: Stereo Points
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 2
+      Size (m): 0.019999999552965164
+      Style: Points
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /stereo/points
+      Use Fixed Frame: true
+      Value: false
+
+    # ── SLAM occupancy map ─────────────────────────────────────────────────────
+    # Published by slam_toolbox when start_slam:=true
+    - Alpha: 0.55
+      Class: rviz_default_plugins/Map
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: true
+      Name: SLAM Map
+      Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /map
+      Update Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /map_updates
+      Value: true
+      Use Timestamp: false
+
+    # ── GraphNav Dijkstra planned path ────────────────────────────────────────
+    # Published by graphnav_mpc/planner_node
+    # Shows the waypoint sequence through the navigation graph to the goal.
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 50; 220; 80
+      Enabled: true
+      Head Diameter: 0.15000000596046448
+      Head Length: 0.07000000029802322
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.05000000074505806
+      Name: GraphNav Planned Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.05
+      Pose Color: 50; 220; 80
+      Pose Style: Arrows
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.05000000074505806
+      Shaft Length: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /graphnav_mpc/planner_node/path
+      Value: true
+
+    # ── MPC predicted trajectory (N-step horizon) ─────────────────────────────
+    # Published by graphnav_mpc/mpc_node
+    # Shows where the MPC solver predicts the robot will go.
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 0; 140; 255
+      Enabled: true
+      Head Diameter: 0.10000000149011612
+      Head Length: 0.07000000029802322
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: MPC Predicted Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.05
+      Pose Color: 0; 140; 255
+      Pose Style: None
+      Radius: 0.019999999552965164
+      Shaft Diameter: 0.029999999329447746
+      Shaft Length: 0.07000000029802322
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /mpc/predicted_path
+      Value: true
+
+    # ── MPC lookahead setpoint ─────────────────────────────────────────────────
+    # Published by graphnav_mpc/mpc_node
+    # The low-pass-filtered point the setpoint_to_cmd_vel controller tracks.
+    - Alpha: 1
+      Axes Length: 0.4
+      Axes Radius: 0.019999999552965164
+      Class: rviz_default_plugins/Pose
+      Color: 255; 140; 0
+      Enabled: true
+      Head Length: 0.15000000596046448
+      Head Radius: 0.07000000029802322
+      Name: MPC Setpoint
+      Shaft Length: 0.25
+      Shaft Radius: 0.029999999329447746
+      Shape: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /mpc/next_setpoint
+      Value: true
+
+    # ── Navigation goal ───────────────────────────────────────────────────────
+    # Published by the 2D Goal Pose tool or an external goal publisher.
+    # The planner_node subscribes to this via the goal_pose_topic remapping.
+    - Alpha: 1
+      Axes Length: 0.5
+      Axes Radius: 0.019999999552965164
+      Class: rviz_default_plugins/Pose
+      Color: 255; 30; 180
+      Enabled: true
+      Head Length: 0.15000000596046448
+      Head Radius: 0.07000000029802322
+      Name: Navigation Goal
+      Shaft Length: 0.3
+      Shaft Radius: 0.029999999329447746
+      Shape: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+      Value: true
+
+    # ── Robot odometry trail ──────────────────────────────────────────────────
+    - Alpha: 1
+      Angle Tolerance: 0.10000000149011612
+      Class: rviz_default_plugins/Odometry
+      Color: 255; 200; 0
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
+      Enabled: true
+      Keep: 200
+      Name: Robot Odometry
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 0.20000000298023224
+        Axes Radius: 0.009999999776482582
+        Color: 255; 200; 0
+        Head Length: 0.07000000029802322
+        Head Radius: 0.029999999329447746
+        Shaft Length: 0.10000000149011612
+        Shaft Radius: 0.009999999776482582
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /odom
+      Value: true
+
+    # ── GraphNav frontier scores (from wildos graphnav_planner C++ node) ──────
+    # Published on graphnav_planner/frontier_scores when the C++ planner runs.
+    # Each cube is colour-mapped: blue=low cost (preferred), red=high cost.
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: GraphNav Frontier Scores
+      Namespaces:
+        frontier_inf_cost: true
+        frontier_id_text: true
+        local_frontier: true
+        local_frontier_time: true
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /graphnav_planner/frontier_scores
+      Value: true
+
+    # ── GraphNav unexplored-space distance map (from C++ planner) ─────────────
+    # Published as grid_map_msgs/GridMap on graphnav_planner/unexplored_space_map.
+    # Requires the grid_map_rviz_plugin to render.
+    - Class: rviz_default_plugins/Map
+      Alpha: 0.4
+      Color Scheme: costmap
+      Draw Behind: false
+      Enabled: false
+      Name: GraphNav Unexplored Map
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /graphnav_planner/unexplored_space_map
+      Value: false
+      Use Timestamp: false
+
+    # ── MPC diagnostics text overlay ──────────────────────────────────────────
+    # /mpc/diagnostics publishes Float64MultiArray:
+    #   [0] success  [1] cost  [2] solve_ms  [3] avg_ms  [4] fails  [5] security
+    # No standard RViz display for Float64MultiArray — use rqt_plot instead:
+    #   ros2 run rqt_plot rqt_plot /mpc/diagnostics/data[2]   # solve time [ms]
+    #   ros2 run rqt_plot rqt_plot /mpc/diagnostics/data[1]   # objective cost
+
+  Enabled: true
+  Global Options:
+    Background Color: 40; 40; 40
+    Fixed Frame: odom
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+      Line color: 128; 128; 0
+    - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891909122467
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /initialpose
+    # "2D Goal Pose" — click in the viewport to send a nav goal to the planner.
+    # Publishes geometry_msgs/PoseStamped on /goal_pose, remapped to
+    # graphnav_mpc/planner_node/goal_pose by the launch file.
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /goal_pose
+    - Class: rviz_default_plugins/PublishPoint
+      Single click: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Scale: 30.0
+      Target Frame: base_link
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 0
+      Y: 0
+    Saved: ~

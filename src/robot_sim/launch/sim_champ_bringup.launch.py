@@ -110,6 +110,18 @@ def generate_launch_description():
             "lidar_yaw": 0.0,
             "min_ray_elevation_deg": 6.0,
             "min_world_z": 0.10,
+            # ── Stereo camera merge ────────────────────────────────────────
+            # Fixed translation from stereo_left_link → lidar_link frame.
+            # Camera bar at xyz=(0.265, 0.0, 0.12), left at y=+0.06 → baseline/2.
+            #   dx = 0.28945 - 0.265    = +0.02445
+            #   dy = 0.0     - 0.06     = -0.06000
+            #   dz = -0.046825 - 0.12   = -0.16683
+            "stereo_cloud_topic": "/stereo/points",
+            "stereo_min_radius": 0.30,
+            "stereo_max_range": 8.0,
+            "stereo_to_lidar_dx": 0.02445,
+            "stereo_to_lidar_dy": -0.06,
+            "stereo_to_lidar_dz": -0.16683,
         }],
         condition=IfCondition(LaunchConfiguration("launch_cloud_filter")),
     )

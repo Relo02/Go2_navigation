@@ -185,6 +185,69 @@
   </link>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
+       STEREO CAMERA FRAMES  —  TF frames for real-robot deployment.
+       No Gazebo sensors here; the physical camera driver publishes its own
+       topics.  These frames must match the mount position used in go2_sim so
+       that cloud_self_filter.py stereo_to_lidar_d{x,y,z} offsets are the same
+       in simulation and on hardware.
+
+       Mount: xyz=(0.265, 0.0, 0.12) from base_link, baseline=0.12 m
+         stereo_camera_link — bar midpoint (parent of left/right)
+         stereo_left_link   — left optic centre  (+Y offset = baseline/2 = 0.06 m)
+         stereo_right_link  — right optic centre (-Y offset)
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <joint name="base_link_to_stereo_camera" type="fixed">
+    <parent link="base_link"/>
+    <child  link="stereo_camera_link"/>
+    <origin xyz="0.265 0.0 0.12" rpy="0 0 0"/>
+  </joint>
+
+  <link name="stereo_camera_link">
+    <visual>
+      <geometry><box size="0.030 0.140 0.030"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <inertial>
+      <mass value="0.10"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="stereo_camera_to_left" type="fixed">
+    <parent link="stereo_camera_link"/>
+    <child  link="stereo_left_link"/>
+    <origin xyz="0 0.06 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="stereo_left_link">
+    <visual>
+      <geometry><box size="0.020 0.020 0.020"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <inertial>
+      <mass value="0.010"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <joint name="stereo_camera_to_right" type="fixed">
+    <parent link="stereo_camera_link"/>
+    <child  link="stereo_right_link"/>
+    <origin xyz="0 -0.06 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="stereo_right_link">
+    <visual>
+      <geometry><box size="0.020 0.020 0.020"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <inertial>
+      <mass value="0.010"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
        Gazebo plugins  (only included when use_gazebo:=true)
        TODO(sim): Replace stubs with working Gazebo Humble plugins.
   ════════════════════════════════════════════════════════════════════════════ -->

@@ -13,18 +13,24 @@
     # ─────────────────────────────────────────────────────────────
     grid_reso: 0.25                # local grid cell size [m]
     grid_half_width: 5.0           # local map is 10 m x 10 m
-    grid_std: 0.2                 # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
-    obstacle_threshold: 0.16       # = 1-Φ(1σ): blocks every cell within 0.30 m of any obstacle
-    obstacle_cost_weight: 100.0     # high penalty so any faint inflation is more expensive than a detour
-    replan_rate_hz: 1.0            # lower refresh reduces path flicker while staying reactive
+    # grid_std drives the hard-block radius: r_hard = grid_std * Φ⁻¹(1-obstacle_threshold)
+    # With obstacle_threshold=0.3: r_hard = grid_std * 0.524
+    # grid_std=0.15 → r_hard≈0.08m (~1 cell).  Soft-cost weight pushes A* to
+    # prefer paths at 0.5–1.0m clearance, well inside the MPC obs_r=0.75m zone.
+    # Previously 0.15 → r_hard≈0.08m: A* routed within 8cm of obstacles, making
+    # the MPC barrier fire on every step and producing erratic trajectories.
+    grid_std: 0.30
+    obstacle_threshold: 0.3
+    obstacle_cost_weight: 150.0
+    replan_rate_hz: 2.0            # 2 Hz: react faster to new obstacles from stereo cloud
     goal_reached_radius: 0.30      # stop replanning near goal
     planning_height: 0.0
 
     # ─────────────────────────────────────────────────────────────
     # MPC horizon parameters
     # ─────────────────────────────────────────────────────────────
-    mpc_N: 50                    # prediction horizon steps
-    mpc_dt: 0.10                   # time step [s] — 50×0.1=5s horizon
+    mpc_N: 30                    # prediction horizon steps
+    mpc_dt: 0.05                   # time step [s] — 50×0.05=2.5s horizon
 
     # ─────────────────────────────────────────────────────────────
     # Velocity constraints (2D kinematic model)
@@ -37,9 +43,15 @@
     # ─────────────────────────────────────────────────────────────
     # Tracking cost weights
     # ─────────────────────────────────────────────────────────────
-    mpc_Q_xy: 50.0                 # xy position tracking weight
-    mpc_Q_yaw: 0.1                  # yaw tracking weight (low — A* segments are jagged)
-    mpc_Q_terminal: 20.0          # terminal state weight multiplier
+    # With A* now giving proper-clearance paths, the MPC can track them closely
+    # without the barrier firing on every step.  Q_xy=60 still keeps the robot
+    # near the A* path but gives the solver room to make clean avoidance detours
+    # when it genuinely needs to (instead of erratic micro-deviations).
+    mpc_Q_xy: 200.0
+    # Q_yaw=0.3: robot aligns with A* tangent direction, preventing lateral drift
+    # across the path.  Previously 0.1 caused the robot to drift sideways.
+    mpc_Q_yaw: 0.3
+    mpc_Q_terminal: 50.0
 
     # ─────────────────────────────────────────────────────────────
     # Control effort weights
@@ -51,9 +63,9 @@
     # ─────────────────────────────────────────────────────────────
     # Obstacle avoidance (logistic sigmoid barrier)
     # ─────────────────────────────────────────────────────────────
-    mpc_W_obs_sigmoid: 10.0       # reduced from 500 to avoid solver spikes
-    mpc_obs_alpha: 4.0             # lower steepness => better conditioning
-    mpc_obs_r: 0.55                # safety radius [m]
+    mpc_W_obs_sigmoid: 50.0        # reduced from 500 to avoid solver spikes
+    mpc_obs_alpha: 6.0             # lower steepness => better conditioning
+    mpc_obs_r: 0.75                # safety radius [m]
     mpc_max_obs_constraints: 12    # fewer constraints improves robustness
     mpc_obs_check_radius: 3.0      # range to search for obstacles [m]
 
@@ -67,7 +79,10 @@
     # MPC node settings
     # ─────────────────────────────────────────────────────────────
     mpc_rate_hz: 10.0              # MPC solve frequency [Hz]
-    mpc_lookahead_dist: 1.2        # shorter lookahead reduces aggressive corner cutting
+    # 0.8m lookahead: robot aims at a closer predicted state, staying tighter on
+    # the A* path instead of cutting corners or overshooting.  1.2m was causing
+    # the robot to aim too far ahead and drift off the planned route.
+    mpc_lookahead_dist: 0.8
     max_lidar_range: 6.0           # max lidar range [m]
     mpc_path_resample_ds: 0.15     # denser path resampling before MPC [m]
     mpc_path_smooth_window: 7      # odd moving-average window on resampled path

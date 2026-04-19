@@ -48,6 +48,7 @@
   <xacro:include filename="$(find go2_sim)/urdf/materials.xacro"/>
   <xacro:include filename="$(find go2_sim)/urdf/leg.xacro"/>
   <xacro:include filename="$(find sensor_models)/urdf/l1_lidar.urdf.xacro"/>
+  <xacro:include filename="$(find sensor_models)/urdf/stereo_camera.urdf.xacro"/>
 
   <!-- ════════════════════════════════════════════════════════════════════
        GAZEBO PLUGINS  (Fortress / ignition:: namespace)
@@ -286,5 +287,28 @@
   <xacro:l1_lidar parent="base_link" prefix="">
     <origin xyz="0.28945 0 -0.046825" rpy="0 0 0"/>
   </xacro:l1_lidar>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       STEREO CAMERA  (from sensor_models Fortress macro)
+       Mounted on the front face of the body, above the LiDAR.
+         xyz = (0.265, 0.0, 0.12) relative to base_link
+         baseline = 0.12 m  →  left at y=+0.06, right at y=-0.06
+
+       Ignition topics (bridged to ROS in sim_champ.launch.py):
+         /stereo/left/image_raw      — left RGB image
+         /stereo/left/camera_info    — left camera info
+         /stereo/depth_image         — depth image (float32 m)
+         /stereo/points              — PointCloud2 → merged into /lidar/points_filtered
+         /stereo/right/image_raw     — right RGB image
+         /stereo/right/camera_info   — right camera info
+
+       cloud_self_filter (stereo_to_lidar_d{x,y,z}):
+         dx = lidar_x - cam_x  = 0.28945 - 0.265       = +0.02445 m
+         dy = lidar_y - left_y = 0.0     - 0.06        = -0.06000 m
+         dz = lidar_z - cam_z  = -0.046825 - 0.12      = -0.16683 m
+       ════════════════════════════════════════════════════════════════════ -->
+  <xacro:stereo_camera parent="base_link" prefix="stereo" baseline="0.12">
+    <origin xyz="0.265 0.0 0.12" rpy="0 0 0"/>
+  </xacro:stereo_camera>
 
 </robot>

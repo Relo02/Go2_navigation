@@ -154,6 +154,11 @@ def generate_launch_description():
     )
 
     # CHAMP quadruped locomotion controller
+    # publish_joint_states: False — joint_states_controller (ros2_control) is the
+    # sole publisher of /joint_states in simulation.  Having both CHAMP and
+    # joint_states_controller publish to the same topic causes robot_state_publisher
+    # to process two concurrent callbacks with slightly different "now" timestamps,
+    # producing persistent TF_OLD_DATA spam for every leg link.
     quadruped_controller_node = Node(
         package="champ_base",
         executable="quadruped_controller_node",
@@ -161,7 +166,7 @@ def generate_launch_description():
         parameters=[
             {"use_sim_time": use_sim_time},
             {"gazebo": True},
-            {"publish_joint_states": True},
+            {"publish_joint_states": False},
             {"publish_joint_control": True},
             {"publish_foot_contacts": True},
             {"joint_controller_topic": "joint_group_effort_controller/joint_trajectory"},
@@ -259,6 +264,27 @@ def generate_launch_description():
         ],
     )
 
+    # Static fallback: base_footprint → base_link at nominal standing height.
+    # CHAMP state_estimation_node publishes this dynamically once joint states
+    # arrive (at t+12 s when joint_states_controller spawns).  Before that the
+    # entire TF chain from map down to every body link — including stereo_left_link
+    # and lidar_link — is broken, causing RViz "No transform" errors and preventing
+    # any sensor display that relies on TF lookup.
+    # This static transform guarantees the chain is always complete from t=0.
+    # The dynamic transform from CHAMP state estimator takes precedence once
+    # available (it is published on /tf, not /tf_static, so it overwrites this).
+    base_footprint_to_base_link_tf = Node(
+        package="tf2_ros",
+        name="base_footprint_to_base_link_tf",
+        executable="static_transform_publisher",
+        parameters=[{"use_sim_time": use_sim_time}],
+        arguments=[
+            "--x", "0", "--y", "0", "--z", "0.28",
+            "--roll", "0", "--pitch", "0", "--yaw", "0",
+            "--frame-id", "base_footprint", "--child-frame-id", "base_link",
+        ],
+    )
+
     # RViz2 (optional; no bundled config — pass -d <config> via extra_args if needed)
     rviz2 = Node(
         package="rviz2",
@@ -317,6 +343,14 @@ def generate_launch_description():
     #   TF is published by robot_state_publisher + EKF (not bridged from Ignition)
     #   /cmd_vel_safe   → CHAMP locomotion controller (through safety gate)
     #   /joint_group_effort_controller/joint_trajectory → effort controller
+    #
+    # Stereo camera topics (from stereo_camera.urdf.xacro rgbd + camera sensors):
+    #   /stereo/left/image_raw   ← Ignition /stereo/left   (RGB image, left)
+    #   /stereo/left/camera_info ← Ignition /stereo/left/camera_info
+    #   /stereo/depth_image      ← Ignition /stereo/left/depth_image  (float32 metres)
+    #   /stereo/points           ← Ignition /stereo/left/points  (PointCloud2 → navigation)
+    #   /stereo/right/image_raw  ← Ignition /stereo/right  (RGB image, right)
+    #   /stereo/right/camera_info← Ignition /stereo/right/camera_info
     gazebo_bridge = Node(
         package="ros_ign_bridge",
         executable="parameter_bridge",
@@ -330,6 +364,13 @@ def generate_launch_description():
             "/world/default/model/go2/joint_state@sensor_msgs/msg/JointState[ignition.msgs.Model",
             "/unilidar/cloud/points@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked",
             "/odom@nav_msgs/msg/Odometry[ignition.msgs.Odometry",
+            # ── Stereo camera (ignition → ROS, all unidirectional) ──────
+            "/stereo/left@sensor_msgs/msg/Image[ignition.msgs.Image",
+            "/stereo/left/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
+            "/stereo/left/depth_image@sensor_msgs/msg/Image[ignition.msgs.Image",
+            "/stereo/left/points@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked",
+            "/stereo/right@sensor_msgs/msg/Image[ignition.msgs.Image",
+            "/stereo/right/camera_info@sensor_msgs/msg/CameraInfo[ignition.msgs.CameraInfo",
             # ── ROS → Ignition ──────────────────────────────────────────
             "/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist",
             "/joint_group_effort_controller/joint_trajectory"
@@ -340,6 +381,11 @@ def generate_launch_description():
             ("/unilidar/cloud/points", "/lidar/points"),
             ("/odom", LaunchConfiguration("gazebo_odom_topic")),
             ("/cmd_vel", "/cmd_vel_safe"),
+            # Remap Ignition image base topics to standard ROS camera naming
+            ("/stereo/left", "/stereo/left/image_raw"),
+            ("/stereo/right", "/stereo/right/image_raw"),
+            ("/stereo/left/depth_image", "/stereo/depth_image"),
+            ("/stereo/left/points", "/stereo/points"),
         ],
     )
 
@@ -361,8 +407,12 @@ def generate_launch_description():
 
     # ── Controller spawners (delayed to allow Gazebo + ign_ros2_control init) ──
     # controller_manager is brought up by ign_ros2_control-system plugin in the URDF.
+    # joint_states_controller at 12 s: Gazebo + ign_ros2_control are reliably
+    # initialised by then.  Starting earlier (was 20 s) means robot_state_publisher
+    # gets real joint positions sooner, removing the RViz "No transform" window
+    # and giving CHAMP state estimator valid FK data from the start.
     controller_spawner_js = TimerAction(
-        period=20.0,
+        period=12.0,
         actions=[
             Node(
                 package="controller_manager",
@@ -378,7 +428,7 @@ def generate_launch_description():
     )
 
     controller_spawner_effort = TimerAction(
-        period=30.0,
+        period=20.0,
         actions=[
             Node(
                 package="controller_manager",
@@ -431,6 +481,7 @@ def generate_launch_description():
         base_to_footprint_ekf,
         footprint_to_odom_ekf,
         map_to_odom_tf,
+        base_footprint_to_base_link_tf,
 
         # Controller lifecycle
         controller_spawner_js,

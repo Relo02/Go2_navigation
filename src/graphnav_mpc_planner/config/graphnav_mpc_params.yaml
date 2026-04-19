@@ -1,0 +1,104 @@
+/**:
+  ros__parameters:
+
+    # ─────────────────────────────────────────────────────────────────
+    # Graph planner (mirrors graphnav_planner C++ parameters)
+    # ─────────────────────────────────────────────────────────────────
+
+    # Cost factor: frontier_path_distance * factor  (unexplored-space BFS dist)
+    frontier_dist_cost_factor: 2.0
+    # Cost factor: euclidean_dist_to_goal * factor
+    goal_dist_cost_factor: 1.0
+    # Multiplier on -log(frontier_score) for visual-score-guided planning
+    frontier_score_factor: 20.0
+    # Min visual score for a frontier to be kept in local exploitation
+    min_local_frontier_score: 0.4
+    # Radius [m] around latest frontier for local exploitation
+    local_frontier_radius: 10.0
+    # How long [s] to prefer local frontiers (exploitation period)
+    path_smoothness_period: 10.0
+    # Traversability class to use from graph edges/nodes
+    trav_class: "default"
+    # Nodes within this radius [m] of the goal are connected to the virtual goal
+    goal_radius: 3.0
+
+    # ─────────────────────────────────────────────────────────────────
+    # MPC horizon
+    # ─────────────────────────────────────────────────────────────────
+    mpc_N: 30                    # prediction horizon steps
+    mpc_dt: 0.05                 # time step [s] → 30×0.05 = 1.5 s horizon
+
+    # ─────────────────────────────────────────────────────────────────
+    # Velocity constraints (2-D kinematic model)
+    # ─────────────────────────────────────────────────────────────────
+    mpc_vx_max: 1.0              # max forward velocity [m/s]
+    mpc_vy_max: 0.5              # max lateral velocity [m/s]
+    mpc_omega_max: 1.5           # max angular velocity [rad/s]
+    mpc_v_ref: 0.5               # desired cruise speed [m/s]
+
+    # ─────────────────────────────────────────────────────────────────
+    # Tracking cost weights
+    # ─────────────────────────────────────────────────────────────────
+    mpc_Q_xy: 200.0              # XY position tracking weight
+    mpc_Q_yaw: 0.3               # yaw tracking weight (path-aligned heading)
+    mpc_Q_terminal: 50.0         # terminal state weight multiplier
+
+    # ─────────────────────────────────────────────────────────────────
+    # Control effort weights
+    # ─────────────────────────────────────────────────────────────────
+    mpc_R_vel: 10.0              # linear velocity control effort
+    mpc_R_omega: 0.5             # angular velocity effort
+    mpc_R_jerk: 1.0              # smoothness: penalty on control-rate change
+
+    # ─────────────────────────────────────────────────────────────────
+    # Obstacle avoidance (logistic sigmoid barrier)
+    # ─────────────────────────────────────────────────────────────────
+    mpc_W_obs_sigmoid: 50.0      # weight per obstacle point per step
+    mpc_obs_alpha: 6.0           # logistic steepness [1/m]
+    mpc_obs_r: 0.75              # safety radius [m]
+    mpc_max_obs_constraints: 12  # LiDAR points used per solve (remainder → sentinels)
+    mpc_obs_check_radius: 3.0    # range to search for obstacles around robot [m]
+
+    # ─────────────────────────────────────────────────────────────────
+    # IPOPT solver
+    # ─────────────────────────────────────────────────────────────────
+    mpc_max_iter: 100
+    mpc_warm_start: true
+
+    # ─────────────────────────────────────────────────────────────────
+    # MPC node timing
+    # ─────────────────────────────────────────────────────────────────
+    mpc_rate_hz: 10.0            # MPC solve frequency [Hz]
+    mpc_lookahead_dist: 0.8      # lookahead distance along predicted trajectory [m]
+    max_lidar_range: 6.0         # max LiDAR range kept for obstacle building [m]
+    mpc_path_resample_ds: 0.15   # resample spacing before feeding path to MPC [m]
+    mpc_path_smooth_window: 7    # moving-average window on resampled path (odd)
+    mpc_setpoint_alpha: 0.20     # low-pass alpha on published MPC setpoint
+    mpc_setpoint_max_step: 0.20  # max setpoint jump per MPC cycle [m]
+    mpc_setpoint_reset_dist: 1.25 # reset filter if new path jumps farther than this [m]
+
+    # ─────────────────────────────────────────────────────────────────
+    # Security protocol (escape from inflated obstacle space)
+    # ─────────────────────────────────────────────────────────────────
+    grid_reso: 0.25
+    grid_half_width: 5.0
+    grid_std: 0.30
+    mpc_security_threshold: 0.25   # occupancy probability that triggers escape
+    mpc_security_escape_radius: 3.0 # BFS search radius [m] for free cell
+
+    # ─────────────────────────────────────────────────────────────────
+    # Setpoint → cmd_vel controller
+    # ─────────────────────────────────────────────────────────────────
+    cmd_rate_hz: 20.0
+    cmd_kp_xy: 1.2
+    cmd_kp_yaw: 0.8
+    cmd_max_vx: 0.8
+    cmd_max_vy: 0.30
+    cmd_max_omega: 0.8
+    cmd_stop_radius: 0.2
+    setpoint_timeout_sec: 2.0
+    enable_yaw_control: true
+    cmd_smoothing_alpha: 0.35
+    cmd_max_ax: 1.0
+    cmd_max_ay: 0.8
+    cmd_max_alpha: 1.5

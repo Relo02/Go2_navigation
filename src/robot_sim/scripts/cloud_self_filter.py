@@ -98,8 +98,19 @@ class CloudSelfFilter(Node):
             PointCloud2, input_topic, self._cloud_cb, qos_profile_sensor_data
         )
         self.create_subscription(PoseStamped, pose_topic, self._pose_cb, 10)
+        # Debug state
+        self._pose_received = False
+        self._cloud_count = 0
+        self._filtered_count = 0
 
+        self.get_logger().info(f'CloudSelfFilter initialized')
+        self.get_logger().info(f'  Input:  {input_topic}')
+        self.get_logger().info(f'  Output: {output_topic} (world frame: {self._world_frame_id})')
+        self.get_logger().info(f'  Pose:   {pose_topic}')
     def _pose_cb(self, msg: PoseStamped) -> None:
+        if not self._pose_received:
+            self.get_logger().info(f'✓ Received pose from frame "{msg.header.frame_id}"')
+            self._pose_received = True
         self._pose = msg
         self._px = float(msg.pose.position.x)
         self._py = float(msg.pose.position.y)
@@ -179,6 +190,7 @@ class CloudSelfFilter(Node):
         return elev_deg < (-self._min_ray_elevation_deg)
 
     def _cloud_cb(self, msg: PointCloud2) -> None:
+        self._cloud_count += 1
         filtered_points = []
         frame_id = msg.header.frame_id
         frame = frame_id.lower()
@@ -187,6 +199,13 @@ class CloudSelfFilter(Node):
             self._publish_in_world_frame
             and frame not in ("map", "odom", "world")
         )
+
+        # Log first cloud message
+        if self._cloud_count == 1:
+            num_points = len(list(point_cloud2.read_points(msg)))
+            self.get_logger().info(
+                f'✓ Received first point cloud: {num_points} points from frame "{frame_id}"'
+            )
 
         for point in point_cloud2.read_points(msg, field_names=None, skip_nans=False):
             x = float(point[0])
@@ -208,6 +227,10 @@ class CloudSelfFilter(Node):
                 # Transform lidar-frame point -> base -> world.
                 if self._pose is None:
                     # Drop until pose is available; avoids feeding wrong-frame points downstream.
+                    if self._cloud_count == 1:
+                        self.get_logger().warning(
+                            'Cloud received but pose not yet available — waiting for /go2/pose'
+                        )
                     continue
                 xb, yb, zb = self._lidar_to_base(x, y, z)
                 xb += self._lidar_x
@@ -237,8 +260,17 @@ class CloudSelfFilter(Node):
             out_header.frame_id = self._world_frame_id
         filtered = point_cloud2.create_cloud(out_header, msg.fields, filtered_points)
         filtered.is_dense = msg.is_dense
-        self._publisher.publish(filtered)
-
+        self._publisher.publish(filtered)        
+        # Throttled debug: confirm filtered clouds are publishing
+        self._filtered_count += 1
+        if self._filtered_count == 1:
+            self.get_logger().info(
+                f'✓ Publishing filtered cloud to {self._pub.topic_name}: {len(filtered_points)} points'
+            )
+        elif self._filtered_count % 20 == 0:
+            self.get_logger().debug(
+                f'Filtering: in={len(list(point_cloud2.read_points(msg)))} out={len(filtered_points)}'
+            )
 
 def main() -> None:
     rclpy.init()

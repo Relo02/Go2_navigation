@@ -162,7 +162,7 @@ class AStarPlanner:
         nearest free cell if that cell is occupied).
 
         If the global goal is outside the grid, find the intersection of
-        the ray (drone -> global_goal) with the grid boundary and return
+        the ray (robot -> global_goal) with the grid boundary and return
         the last free boundary cell along that ray.
         """
         gix_raw, giy_raw = grid_map.world_to_index(gx, gy)

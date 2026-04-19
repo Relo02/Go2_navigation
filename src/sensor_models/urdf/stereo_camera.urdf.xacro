@@ -1,0 +1,217 @@
+<?xml version="1.0"?>
+<!--
+  stereo_camera.urdf.xacro
+  Reusable sensor macro for a forward-facing stereo camera.
+
+  Two macros are provided:
+    1. stereo_camera  — Gazebo Fortress (Ignition Gazebo 6, ROS 2 Humble) — USE THIS
+
+  ─────────────────────────────────────────────────────────────────────────────
+  MACRO: stereo_camera  (Fortress / Ignition Gazebo 6)
+  ─────────────────────────────────────────────────────────────────────────────
+  Simulates a stereo camera pair (e.g. ZED2 / RealSense D435) using:
+    - An rgbd_camera sensor on the left link: publishes RGB image, depth image,
+      and a PointCloud2 directly (no stereo_image_proc needed).
+    - A plain camera sensor on the right link: publishes RGB image + camera_info
+      for offline stereo pair recording / post-processing.
+
+  Frame tree created by this macro:
+    ${parent}
+      └─ ${prefix}_camera_link   (bar midpoint, visual only)
+           ├─ ${prefix}_left_link   ← rgbd_camera sensor
+           └─ ${prefix}_right_link  ← camera sensor (RGB only)
+
+  Ignition topics published (bridged to ROS in launch file):
+    /${prefix}/left                 → sensor_msgs/Image  (left RGB)
+    /${prefix}/left/camera_info     → sensor_msgs/CameraInfo
+    /${prefix}/left/depth_image     → sensor_msgs/Image  (depth float32, metres)
+    /${prefix}/left/points          → sensor_msgs/PointCloud2  ← used for navigation
+    /${prefix}/right                → sensor_msgs/Image  (right RGB)
+    /${prefix}/right/camera_info    → sensor_msgs/CameraInfo
+
+  After ros_ign_bridge remapping (see sim_champ.launch.py):
+    /stereo/left/image_raw          ← bridged from /${prefix}/left
+    /stereo/left/camera_info
+    /stereo/depth_image             ← bridged from /${prefix}/left/depth_image
+    /stereo/points                  ← bridged from /${prefix}/left/points  ← merged into /lidar/points_filtered
+    /stereo/right/image_raw         ← bridged from /${prefix}/right
+    /stereo/right/camera_info
+
+  Usage:
+    <xacro:include filename="$(find sensor_models)/urdf/stereo_camera.urdf.xacro"/>
+    <xacro:stereo_camera parent="base_link" prefix="stereo">
+      <origin xyz="0.265 0.0 0.12" rpy="0 0 0"/>
+    </xacro:stereo_camera>
+
+  Parameters:
+    parent        — URDF link to attach the camera bar to (required)
+    prefix        — string prepended to all generated link/joint/sensor names
+                    (default: "stereo"). With prefix="stereo" the sensor links
+                    are named "stereo_left_link" and "stereo_right_link".
+    baseline      — distance between left and right optical centres [m] (default 0.12)
+    update_rate   — camera frame rate [Hz] (default 15)
+    h_fov_deg     — horizontal field-of-view [degrees] (default 80)
+    width/height  — image resolution in pixels (default 640×480)
+    near/far      — depth clip planes [m] (default 0.1 / 15.0)
+
+  Block parameter:
+    *origin — <origin xyz="..." rpy="..."/> child element (required)
+
+  The system plugin ignition-gazebo-sensors-system must be loaded in the world SDF
+  (already present in go2_sim/worlds/default.sdf for the LiDAR).
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       FORTRESS MACRO  (ignition-gazebo-sensors-system handles the sensors)
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <xacro:macro name="stereo_camera" params="
+      parent
+      prefix:=stereo
+      baseline:=0.12
+      update_rate:=15
+      h_fov_deg:=80.0
+      width:=640
+      height:=480
+      near:=0.1
+      far:=15.0
+      *origin">
+
+    <xacro:property name="h_fov_rad" value="${h_fov_deg * pi / 180.0}"/>
+
+    <!-- ── Camera bar link (visual housing; midpoint between left and right) ── -->
+    <link name="${prefix}_camera_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.030 ${baseline + 0.020} 0.030"/>
+        </geometry>
+        <material name="stereo_dark">
+          <color rgba="0.10 0.10 0.10 1.0"/>
+        </material>
+      </visual>
+      <inertial>
+        <mass value="0.10"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0"
+                 iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_camera_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${prefix}_camera_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <!-- ── Left camera link (rgbd sensor: RGB + depth image + PointCloud2) ── -->
+    <link name="${prefix}_left_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><box size="0.020 0.020 0.020"/></geometry>
+        <material name="stereo_dark"/>
+      </visual>
+      <inertial>
+        <mass value="0.010"/>
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_left_joint" type="fixed">
+      <parent link="${prefix}_camera_link"/>
+      <child link="${prefix}_left_link"/>
+      <!-- left optic at +Y (standard ROS convention: left=+Y from camera centre) -->
+      <origin xyz="0 ${baseline / 2} 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- ── Right camera link (RGB camera sensor only) ── -->
+    <link name="${prefix}_right_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><box size="0.020 0.020 0.020"/></geometry>
+        <material name="stereo_dark"/>
+      </visual>
+      <inertial>
+        <mass value="0.010"/>
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}_right_joint" type="fixed">
+      <parent link="${prefix}_camera_link"/>
+      <child link="${prefix}_right_link"/>
+      <origin xyz="0 ${-baseline / 2} 0" rpy="0 0 0"/>
+    </joint>
+
+    <!--
+      LEFT — rgbd_camera sensor.
+      Publishes on Ignition topics (base = /${prefix}/left):
+        /${prefix}/left              — ignition.msgs.Image        (RGB)
+        /${prefix}/left/camera_info  — ignition.msgs.CameraInfo
+        /${prefix}/left/depth_image  — ignition.msgs.Image        (float32 depth, metres)
+        /${prefix}/left/points       — ignition.msgs.PointCloudPacked  ← navigation input
+
+      The system plugin ignition-gazebo-sensors-system (loaded in default.sdf)
+      handles all sensor rendering; no per-sensor plugin element is needed.
+    -->
+    <gazebo reference="${prefix}_left_link">
+      <sensor name="${prefix}_left_rgbd" type="rgbd_camera">
+        <topic>/${prefix}/left</topic>
+        <update_rate>${update_rate}</update_rate>
+        <always_on>1</always_on>
+        <ignition_frame_id>${prefix}_left_link</ignition_frame_id>
+        <camera>
+          <horizontal_fov>${h_fov_rad}</horizontal_fov>
+          <image>
+            <width>${width}</width>
+            <height>${height}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>${near}</near>
+            <far>${far}</far>
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+      </sensor>
+    </gazebo>
+
+    <!--
+      RIGHT — plain camera sensor (RGB only; forms the stereo pair for image recording).
+      Publishes on Ignition topics:
+        /${prefix}/right              — ignition.msgs.Image
+        /${prefix}/right/camera_info  — ignition.msgs.CameraInfo
+    -->
+    <gazebo reference="${prefix}_right_link">
+      <sensor name="${prefix}_right_camera" type="camera">
+        <topic>/${prefix}/right</topic>
+        <update_rate>${update_rate}</update_rate>
+        <always_on>1</always_on>
+        <ignition_frame_id>${prefix}_right_link</ignition_frame_id>
+        <camera>
+          <horizontal_fov>${h_fov_rad}</horizontal_fov>
+          <image>
+            <width>${width}</width>
+            <height>${height}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>${near}</near>
+            <far>${far}</far>
+          </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
+        </camera>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>
