@@ -1,0 +1,891 @@
+#!/usr/bin/env python3
+"""
+Bayesian MPC Tuner for Go2 — with full recording pipeline.
+
+Per-trial artifacts saved to tuning_results/trial_NNN/:
+  planner_params.yaml         — exact YAML used (parameter history)
+  scenario_<name>/rosbag/     — ros2 bag record for every scenario
+  gp_surrogate.json           — ARD-GP kernel params fit on accumulated data
+  tpe_state.json              — hyperopt TPE Trials state snapshot
+  metadata.json               — params, per-scenario scores, timing
+
+Root-level artifacts:
+  best_planner_params.yaml    — YAML for the best trial so far
+  results.json                — all trial summaries + best
+  gp_history.json             — GP kernel param evolution (length scales, noise)
+  convergence.png             — score vs trial
+  param_importance.png        — GP-derived parameter sensitivity
+  length_scales.png           — GP length scale evolution
+
+Note on the GP:
+  hyperopt uses TPE (Tree-structured Parzen Estimators), not a GP.
+  A separate ARD Matern-5/2 GP is fit on accumulated (params, score) data
+  after each trial purely for analysis — short length scales = sensitive params.
+"""
+
+import copy
+import json
+import os
+import signal
+import shutil
+import subprocess
+import time
+from datetime import datetime
+from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import yaml
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from geometry_msgs.msg import PoseStamped, Twist
+from nav_msgs.msg import Path as NavPath
+from sensor_msgs.msg import PointCloud2
+from std_msgs.msg import Float64MultiArray
+
+from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
+
+# ─── Paths ────────────────────────────────────────────────────────────────────
+
+REPO_ROOT    = Path(__file__).parent.parent.resolve()
+BASE_PARAMS  = REPO_ROOT / "src/a_star_mpc_planner/config/planner_params.yaml"
+RESULTS_DIR  = REPO_ROOT / "tuning_results"
+ROS_SETUP    = "/opt/ros/humble/setup.bash"
+PKG_SETUP    = REPO_ROOT / "install/setup.bash"
+
+# ─── Search space ─────────────────────────────────────────────────────────────
+
+SEARCH_SPACE = {
+    "mpc_Q_xy":          hp.uniform("mpc_Q_xy",          50.0,  500.0),
+    "mpc_W_obs_sigmoid": hp.uniform("mpc_W_obs_sigmoid",  50.0,  400.0),
+    "mpc_obs_r":         hp.uniform("mpc_obs_r",           0.35,  0.85),
+    "mpc_R_vel":         hp.uniform("mpc_R_vel",            0.1,   3.0),
+    "mpc_lookahead_dist":hp.uniform("mpc_lookahead_dist",   0.5,   2.5),
+}
+
+PARAM_NAMES  = list(SEARCH_SPACE.keys())
+
+# ─── Trial settings ───────────────────────────────────────────────────────────
+
+MAX_EVALS         = 30
+N_RANDOM_INIT     = 8
+SCENARIO_TIMEOUT  = 60      # seconds to wait for goal reached
+PLANNER_DELAY_SEC = 30      # seconds for Gazebo to stabilise
+CLEANUP_WAIT_SEC  = 5
+
+# Topics recorded in every rosbag
+BAG_TOPICS = [
+    "/odom",
+    "/go2/pose",
+    "/cmd_vel",
+    "/a_star/path",
+    "/mpc/next_setpoint",
+    "/mpc/predicted_path",
+    "/mpc/diagnostics",
+    "/goal_pose",
+    "/tf",
+    "/tf_static",
+    "/lidar/points_filtered",
+]
+
+# Test scenarios — use worlds that exist in the repo
+SCENARIOS = [
+    {"name": "open",      "world": "default.sdf", "goal_x":  5.0, "goal_y":  0.0, "weight": 0.30},
+    {"name": "diagonal",  "world": "default.sdf", "goal_x":  5.0, "goal_y":  5.0, "weight": 0.40},
+    {"name": "lateral",   "world": "default.sdf", "goal_x":  0.0, "goal_y":  6.0, "weight": 0.30},
+]
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def _source_cmd(cmd: str) -> str:
+    return f"source {ROS_SETUP} && source {PKG_SETUP} && {cmd}"
+
+
+def _save_json(data, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2, default=_json_default)
+
+
+def _json_default(obj):
+    if isinstance(obj, np.ndarray):  return obj.tolist()
+    if isinstance(obj, np.floating): return float(obj)
+    if isinstance(obj, np.integer):  return int(obj)
+    raise TypeError(f"Not JSON-serialisable: {type(obj)}")
+
+
+def _load_yaml(path: Path) -> dict:
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def _save_yaml(data: dict, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
+
+# ─── YAML snapshot builder ────────────────────────────────────────────────────
+
+def build_trial_yaml(base: dict, params: dict, trial_num: int) -> dict:
+    """
+    Deep-copy the base YAML and patch in the tuned parameter values.
+    Adds a _tuning_meta block for traceability without touching real params.
+    """
+    trial = copy.deepcopy(base)
+    ros_params = trial["/**"]["ros__parameters"]
+
+    for key, val in params.items():
+        if key in ros_params:
+            ros_params[key] = float(val)
+        else:
+            # Parameter not in base — add it (shouldn't happen with current space)
+            ros_params[key] = float(val)
+
+    # Traceability block (prefixed so it's clearly not a real ROS param)
+    ros_params["_tuning_trial"]     = trial_num
+    ros_params["_tuning_timestamp"] = datetime.astimezone(datetime.now()).isoformat() + "Z"
+    return trial
+
+
+# ─── Rosbag recorder ─────────────────────────────────────────────────────────
+
+class RosbagRecorder:
+    """Thin wrapper around `ros2 bag record` subprocess."""
+
+    def __init__(self, output_dir: Path):
+        self.output_dir = output_dir
+        self._proc = None
+
+    def start(self) -> None:
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        topics = " ".join(BAG_TOPICS)
+        cmd = _source_cmd(
+            f"ros2 bag record {topics} --output {self.output_dir}/bag"
+        )
+        self._proc = subprocess.Popen(
+            ["bash", "-c", cmd],
+            preexec_fn=os.setsid,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    def stop(self) -> None:
+        if self._proc is None:
+            return
+        try:
+            os.killpg(os.getpgid(self._proc.pid), signal.SIGTERM)
+            self._proc.wait(timeout=5)
+        except Exception:
+            pass
+        self._proc = None
+
+
+# ─── Simulation manager ───────────────────────────────────────────────────────
+
+class SimulationManager:
+    """Launch / kill the Gazebo + planner stack for one scenario."""
+
+    def __init__(self):
+        self._proc = None
+
+    def launch(self, params_yaml: Path, scenario: dict) -> None:
+        # Resolve world path
+        world_rel = scenario["world"]
+        go2_share = subprocess.check_output(
+            ["bash", "-c", _source_cmd("ros2 pkg prefix go2_sim 2>/dev/null")],
+            text=True
+        ).strip() + f"/share/go2_sim/worlds/{world_rel}"
+
+        cmd = _source_cmd(
+            "ros2 launch robot_sim sim_a_star_mpc.launch.py"
+            f" gui:=false"
+            f" use_rviz:=false"
+            f" planner_params:={params_yaml}"
+            f" wait_for_goal:=false"
+            f" goal_x:={scenario['goal_x']}"
+            f" goal_y:={scenario['goal_y']}"
+            f" goal_z:=0.0"
+            f" planner_delay_sec:={PLANNER_DELAY_SEC}"
+            f" world:={go2_share}"
+        )
+        self._proc = subprocess.Popen(
+            ["bash", "-c", cmd],
+            preexec_fn=os.setsid,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(3)
+        if self._proc.poll() is not None:
+            raise RuntimeError("Simulation failed to start")
+
+    def kill(self) -> None:
+        if self._proc is not None:
+            try:
+                os.killpg(os.getpgid(self._proc.pid), signal.SIGTERM)
+                self._proc.wait(timeout=8)
+            except Exception:
+                pass
+            self._proc = None
+        # Belt-and-suspenders: nuke any lingering processes
+        for pattern in [
+            "ign gazebo", "gzserver", "gzclient",
+            "a_star_node", "mpc_node", "setpoint_to_cmd_vel",
+            "odom_to_pose", "cloud_self_filter",
+        ]:
+            subprocess.call(
+                ["pkill", "-9", "-f", pattern],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        time.sleep(CLEANUP_WAIT_SEC)
+
+
+# ─── ROS 2 performance monitor ────────────────────────────────────────────────
+
+class PerformanceMonitor(Node):
+    """
+    Records trajectory, commands, LiDAR closest-obstacle distance, and MPC
+    diagnostics during a single scenario run.
+
+    MPC diagnostics topic layout (/mpc/diagnostics Float64MultiArray):
+      [0] success   — IPOPT solve success (1.0 / 0.0)
+      [1] cost      — total MPC objective value
+      [2] solve_ms  — wall-clock solve time [ms]
+      [3] avg_ms    — rolling average solve time [ms]
+      [4] fails     — consecutive IPOPT failure count
+      [5] security  — security-protocol active (1.0 / 0.0)
+      [6] vx_eff    — effective vx limit after adaptive clamping
+    """
+
+    # Index aliases for /mpc/diagnostics fields
+    _DIAG_SUCCESS  = 0
+    _DIAG_COST     = 1
+    _DIAG_SOLVE_MS = 2
+    _DIAG_AVG_MS   = 3
+    _DIAG_FAILS    = 4
+    _DIAG_SECURITY = 5
+    _DIAG_VX_EFF   = 6
+
+    def __init__(self):
+        super().__init__("performance_monitor")
+        self.trajectory: list    = []   # [(t, x, y, yaw)]
+        self.cmd_history: list   = []   # [(t, vx, vy, wz)]
+        self.mpc_diag: list      = []   # [(t, success, cost, solve_ms, avg_ms, fails, security, vx_eff)]
+        self.predicted_paths: list = [] # [(t, n_waypoints, last_wx, last_wy)] — lightweight summary
+        self.min_obs_dist: float = float("inf")
+        self.recording   = False
+        self.start_time  = None
+        self.goal_pos    = None
+
+        # Sensor topics use BEST_EFFORT — match publisher QoS to avoid dropping msgs
+        _sensor_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+        )
+        self.create_subscription(PoseStamped,      "/go2/pose",              self._on_pose,  10)
+        self.create_subscription(Twist,            "/cmd_vel",               self._on_cmd,   10)
+        self.create_subscription(PointCloud2,      "/lidar/points_filtered", self._on_cloud,  _sensor_qos)
+        self.create_subscription(Float64MultiArray,"/mpc/diagnostics",       self._on_diag,  10)
+        self.create_subscription(NavPath,          "/mpc/predicted_path",    self._on_path,   5)
+
+        self._goal_pub = self.create_publisher(PoseStamped, "/goal_pose", 10)
+
+    def start(self, goal_x: float, goal_y: float) -> None:
+        self.trajectory.clear()
+        self.cmd_history.clear()
+        self.mpc_diag.clear()
+        self.predicted_paths.clear()
+        self.min_obs_dist = float("inf")
+        self.start_time   = time.time()
+        self.goal_pos     = (goal_x, goal_y)
+        self.recording    = True
+
+        msg = PoseStamped()
+        msg.header.frame_id = "map"
+        msg.header.stamp    = self.get_clock().now().to_msg()
+        msg.pose.position.x = float(goal_x)
+        msg.pose.position.y = float(goal_y)
+        msg.pose.orientation.w = 1.0
+        self._goal_pub.publish(msg)
+
+    def stop(self) -> None:
+        self.recording = False
+
+    def _on_pose(self, msg: PoseStamped) -> None:
+        if not self.recording:
+            return
+        q   = msg.pose.orientation
+        yaw = np.arctan2(
+            2.0 * (q.w * q.z + q.x * q.y),
+            1.0 - 2.0 * (q.y**2 + q.z**2),
+        )
+        self.trajectory.append((
+            time.time() - self.start_time,
+            msg.pose.position.x,
+            msg.pose.position.y,
+            float(yaw),
+        ))
+
+    def _on_cmd(self, msg: Twist) -> None:
+        if not self.recording:
+            return
+        self.cmd_history.append((
+            time.time() - self.start_time,
+            msg.linear.x, msg.linear.y, msg.angular.z,
+        ))
+
+    def _on_diag(self, msg: Float64MultiArray) -> None:
+        if not self.recording:
+            return
+        d = msg.data
+        if len(d) < 7:
+            return
+        self.mpc_diag.append((
+            time.time() - self.start_time,
+            float(d[self._DIAG_SUCCESS]),
+            float(d[self._DIAG_COST]),
+            float(d[self._DIAG_SOLVE_MS]),
+            float(d[self._DIAG_AVG_MS]),
+            float(d[self._DIAG_FAILS]),
+            float(d[self._DIAG_SECURITY]),
+            float(d[self._DIAG_VX_EFF]),
+        ))
+
+    def _on_path(self, msg: NavPath) -> None:
+        if not self.recording or not msg.poses:
+            return
+        last = msg.poses[-1].pose.position
+        self.predicted_paths.append((
+            time.time() - self.start_time,
+            len(msg.poses),
+            float(last.x),
+            float(last.y),
+        ))
+
+    def _on_cloud(self, msg: PointCloud2) -> None:
+        # Minimal distance estimate from field 'x' of the first few points
+        if not self.recording or msg.width == 0:
+            return
+        # Read first 32 bytes of data to get a rough closest-point estimate
+        # (avoids importing sensor_msgs_py for speed)
+        try:
+            import struct
+            point_step = msg.point_step
+            n = min(msg.width * msg.height, 200)
+            dists = []
+            for i in range(n):
+                off = i * point_step
+                x, y, z = struct.unpack_from("fff", bytes(msg.data[off:off+12]))
+                dists.append(np.hypot(x, y))
+            if dists:
+                self.min_obs_dist = min(self.min_obs_dist, min(dists))
+        except Exception:
+            pass
+
+
+# ─── Score computation ────────────────────────────────────────────────────────
+
+def compute_score(monitor: PerformanceMonitor, goal: tuple) -> tuple:
+    """
+    Compute a composite score in [0, 1] from the recorded scenario data.
+    Returns (score, metrics_dict).
+    """
+    if not monitor.trajectory:
+        return 0.0, {"error": "no trajectory"}
+
+    traj  = np.array([(x, y) for _, x, y, _ in monitor.trajectory])
+    start = traj[0]
+    final = traj[-1]
+    goal_arr = np.array(goal)
+
+    dist_to_goal  = float(np.linalg.norm(final - goal_arr))
+    initial_dist  = float(np.linalg.norm(start - goal_arr))
+    goal_reached  = dist_to_goal < 0.5
+    progress_frac = max(0.0, (initial_dist - dist_to_goal) / max(initial_dist, 0.01))
+
+    # Path efficiency
+    if len(traj) > 1:
+        path_len  = float(np.sum(np.linalg.norm(np.diff(traj, axis=0), axis=1)))
+        efficiency = min(1.0, initial_dist / max(path_len, initial_dist))
+    else:
+        path_len, efficiency = 0.0, 0.0
+
+    # Control smoothness (jerk proxy)
+    if len(monitor.cmd_history) > 3:
+        cmds       = np.array([(vx, vy, wz) for _, vx, vy, wz in monitor.cmd_history])
+        mean_jerk  = float(np.mean(np.abs(np.diff(cmds, n=2, axis=0))))
+        smoothness = float(np.exp(-mean_jerk / 2.0))
+    else:
+        mean_jerk, smoothness = 0.0, 0.0
+
+    # Safety
+    safety = 1.0 if monitor.min_obs_dist > 0.3 else 0.0
+
+    # Time efficiency (only if goal reached)
+    if goal_reached and monitor.trajectory:
+        elapsed      = monitor.trajectory[-1][0]
+        expected_sec = initial_dist / 0.5
+        time_score   = min(1.0, expected_sec / max(elapsed, 0.1))
+    else:
+        time_score = 0.0
+
+    if goal_reached:
+        score = (0.30 * 1.0 + 0.25 * efficiency + 0.20 * smoothness
+                 + 0.15 * safety + 0.10 * time_score)
+    else:
+        score = (0.30 * progress_frac + 0.10 * efficiency
+                 + 0.10 * smoothness  + 0.10 * safety)
+
+    metrics = {
+        "goal_reached":    goal_reached,
+        "dist_to_goal":    dist_to_goal,
+        "progress_frac":   progress_frac,
+        "path_length":     path_len,
+        "efficiency":      efficiency,
+        "mean_jerk":       mean_jerk,
+        "smoothness":      smoothness,
+        "min_obs_dist":    float(monitor.min_obs_dist),
+        "safety_score":    safety,
+        "time_score":      time_score,
+        "elapsed_sec":     float(monitor.trajectory[-1][0]) if monitor.trajectory else 0.0,
+        "n_traj_points":   len(monitor.trajectory),
+        "n_cmd_points":    len(monitor.cmd_history),
+        "score":           float(score),
+    }
+
+    # ── MPC diagnostics summary (from /mpc/diagnostics) ──────────────────
+    if monitor.mpc_diag:
+        diag = np.array(monitor.mpc_diag)   # shape (N, 8): t,success,cost,solve_ms,avg_ms,fails,security,vx_eff
+        n_solves         = len(diag)
+        success_rate     = float(diag[:, 1].mean())          # fraction of solves that succeeded
+        mean_cost        = float(diag[:, 2].mean())
+        mean_solve_ms    = float(diag[:, 3].mean())
+        max_solve_ms     = float(diag[:, 3].max())
+        mean_avg_ms      = float(diag[:, 4].mean())
+        total_ipopt_fails= float(diag[:, 5].max())           # peak consecutive failures
+        security_frac    = float(diag[:, 6].mean())          # fraction of time in security mode
+        mean_vx_eff      = float(diag[:, 7].mean())          # mean effective vx limit
+        metrics.update({
+            "mpc_n_solves":        n_solves,
+            "mpc_success_rate":    success_rate,
+            "mpc_mean_cost":       mean_cost,
+            "mpc_mean_solve_ms":   mean_solve_ms,
+            "mpc_max_solve_ms":    max_solve_ms,
+            "mpc_mean_avg_ms":     mean_avg_ms,
+            "mpc_peak_fails":      total_ipopt_fails,
+            "mpc_security_frac":   security_frac,
+            "mpc_mean_vx_eff":     mean_vx_eff,
+        })
+    else:
+        metrics["mpc_n_solves"] = 0
+
+    # ── Predicted-path summary (from /mpc/predicted_path) ────────────────
+    if monitor.predicted_paths:
+        metrics["mpc_n_predicted_paths"] = len(monitor.predicted_paths)
+        metrics["mpc_mean_horizon_pts"]  = float(
+            np.mean([p[1] for p in monitor.predicted_paths])
+        )
+    else:
+        metrics["mpc_n_predicted_paths"] = 0
+
+    return float(score), metrics
+
+
+# ─── GP surrogate analysis ────────────────────────────────────────────────────
+
+def fit_gp_surrogate(history: list) -> dict:
+    """
+    Fit an ARD Matern-5/2 GP on all (params, score) data collected so far.
+
+    This GP is separate from hyperopt's TPE — it's used purely to extract:
+      - Length scales per parameter (short scale = sensitive parameter)
+      - Signal variance and noise level
+      - Normalised parameter sensitivity / importance
+
+    Returns a dict ready to be saved as gp_surrogate.json.
+    """
+    if len(history) < 3:
+        return {"skipped": "need at least 3 observations", "n": len(history)}
+
+    try:
+        from sklearn.gaussian_process import GaussianProcessRegressor
+        from sklearn.gaussian_process.kernels import (
+            ConstantKernel, Matern, WhiteKernel,
+        )
+        from sklearn.preprocessing import StandardScaler
+    except ImportError:
+        return {"skipped": "scikit-learn not installed"}
+
+    # Build (X, y) matrix
+    X = np.array([[t["params"][p] for p in PARAM_NAMES] for t in history])
+    y = np.array([t["score"] for t in history])
+
+    # Normalise inputs so length scales are comparable
+    scaler = StandardScaler()
+    X_s    = scaler.fit_transform(X)
+
+    n_dims = X_s.shape[1]
+    kernel = (
+        ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3))
+        * Matern(
+            length_scale=np.ones(n_dims),
+            length_scale_bounds=[(1e-2, 1e2)] * n_dims,
+            nu=2.5,
+        )
+        + WhiteKernel(noise_level=0.01, noise_level_bounds=(1e-5, 1.0))
+    )
+
+    gpr = GaussianProcessRegressor(
+        kernel=kernel,
+        n_restarts_optimizer=5,
+        normalize_y=True,
+        alpha=1e-6,
+    )
+    gpr.fit(X_s, y)
+
+    fitted = gpr.kernel_
+    theta  = fitted.theta.tolist()   # log-scale hyperparameters
+
+    # Extract component kernels:
+    #   ConstantKernel * Matern  → k1 (product)
+    #   k1.k2  → Matern
+    #   + WhiteKernel → k2 (sum)
+    try:
+        matern       = fitted.k1.k2          # ConstantKernel * Matern → .k2 is Matern
+        constant_val = float(fitted.k1.k1.constant_value)
+        length_scales= matern.length_scale.tolist()
+        noise_level  = float(fitted.k2.noise_level)
+    except Exception as e:
+        return {"error": str(e), "theta": theta, "n": len(history)}
+
+    # Sensitivity = inverse length scale (normalised so they sum to 1)
+    inv_ls     = [1.0 / ls for ls in length_scales]
+    total_inv  = sum(inv_ls) or 1.0
+    sensitivity = {name: float(v / total_inv)
+                   for name, v in zip(PARAM_NAMES, inv_ls)}
+
+    # GP posterior mean at the best observed point
+    best_idx   = int(np.argmax(y))
+    best_x     = X_s[best_idx:best_idx+1]
+    gp_mean_at_best, gp_std_at_best = gpr.predict(best_x, return_std=True)
+
+    return {
+        "n_observations":    len(history),
+        "kernel_theta_log":  theta,
+        "constant_value":    constant_val,
+        "length_scales":     {n: float(ls)
+                              for n, ls in zip(PARAM_NAMES, length_scales)},
+        "noise_level":       noise_level,
+        "param_sensitivity": sensitivity,
+        "gp_mean_at_best":   float(gp_mean_at_best[0]),
+        "gp_std_at_best":    float(gp_std_at_best[0]),
+        "scaler_mean":       scaler.mean_.tolist(),
+        "scaler_scale":      scaler.scale_.tolist(),
+    }
+
+
+def serialize_tpe_state(trials: Trials, trial_num: int) -> dict:
+    """
+    Snapshot of hyperopt's TPE Trials object after `trial_num` observations.
+    Captures the raw trial data that drives the TPE model.
+    """
+    losses = [t["result"].get("loss") for t in trials.trials]
+    # best_trial raises AllTrialsFailed when called inside the objective
+    # (current trial not yet committed) — guard with try/except
+    try:
+        best_t = trials.best_trial if trials.trials else {}
+    except Exception:
+        best_t = {}
+
+    return {
+        "trial":       trial_num,
+        "n_trials":    len(trials.trials),
+        "losses":      [float(l) if l is not None else None for l in losses],
+        "best_loss":   float(best_t.get("result", {}).get("loss", float("inf"))),
+        "best_tid":    best_t.get("tid"),
+        # Raw parameter values for all completed trials
+        "Xi": [
+            {k: float(v[0]) if v else None
+             for k, v in t["misc"]["vals"].items()}
+            for t in trials.trials
+            if t["result"].get("status") == STATUS_OK
+        ],
+    }
+
+
+# ─── Plots ────────────────────────────────────────────────────────────────────
+
+def _plot_convergence(results: list, out: Path) -> None:
+    scores      = [r["score"] for r in results]
+    best_so_far = [max(scores[:i+1]) for i in range(len(scores))]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.scatter(range(1, len(scores)+1), scores, alpha=0.6, s=30, label="Trial score")
+    ax.plot(range(1, len(scores)+1), best_so_far, "r-", lw=2, label="Best so far")
+    ax.set_xlabel("Trial"); ax.set_ylabel("Score"); ax.set_title("MPC Tuning — Convergence")
+    ax.legend(); ax.grid(alpha=0.3)
+    plt.tight_layout(); fig.savefig(out, dpi=150); plt.close(fig)
+
+
+def _plot_param_importance(gp_history: list, out: Path) -> None:
+    valid = [s for s in gp_history if "param_sensitivity" in s]
+    if not valid:
+        return
+    trials = [s["trial"] for s in valid]
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for name in PARAM_NAMES:
+        vals = [s["param_sensitivity"][name] for s in valid]
+        ax.plot(trials, vals, marker="o", ms=4, label=name)
+    ax.set_xlabel("Trial"); ax.set_ylabel("Normalised sensitivity (inv length-scale)")
+    ax.set_title("Parameter Importance from GP Surrogate")
+    ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    ax.grid(alpha=0.3); plt.tight_layout()
+    fig.savefig(out, dpi=150, bbox_inches="tight"); plt.close(fig)
+
+
+def _plot_length_scales(gp_history: list, out: Path) -> None:
+    valid = [s for s in gp_history if "length_scales" in s]
+    if not valid:
+        return
+    trials = [s["trial"] for s in valid]
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for name in PARAM_NAMES:
+        vals = [s["length_scales"][name] for s in valid]
+        ax.semilogy(trials, vals, marker="o", ms=4, label=name)
+    ax.set_xlabel("Trial"); ax.set_ylabel("GP length scale (log)")
+    ax.set_title("GP Length Scales — Landscape Understanding Over Time")
+    ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
+    ax.grid(alpha=0.3); plt.tight_layout()
+    fig.savefig(out, dpi=150, bbox_inches="tight"); plt.close(fig)
+
+
+# ─── Main tuner ───────────────────────────────────────────────────────────────
+
+class BayesianMPCTuner:
+
+    def __init__(self):
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        self._base_params  = _load_yaml(BASE_PARAMS)
+        self._sim          = SimulationManager()
+        self._trial_num    = 0
+        self._history: list[dict] = []
+        self._gp_history:  list[dict] = []
+        self._best_score   = -np.inf
+        self._best_params  = None
+        self._best_trial   = -1
+        self._hp_trials    = Trials()
+
+    # ── Per-scenario runner ───────────────────────────────────────────────────
+
+    def _run_scenario(
+        self,
+        scenario: dict,
+        params_yaml: Path,
+        trial_dir: Path,
+    ) -> dict:
+        scenario_dir = trial_dir / f"scenario_{scenario['name']}"
+        scenario_dir.mkdir(parents=True, exist_ok=True)
+
+        bag = RosbagRecorder(scenario_dir / "rosbag")
+
+        try:
+            self._sim.launch(params_yaml, scenario)
+            bag.start()
+
+            # Wait for planner startup
+            time.sleep(PLANNER_DELAY_SEC + 5)
+
+            # Start ROS 2 monitor
+            if rclpy.ok():
+                rclpy.shutdown()
+            rclpy.init()
+            monitor = PerformanceMonitor()
+            monitor.start(scenario["goal_x"], scenario["goal_y"])
+
+            # Spin until goal reached or timeout
+            end_t = time.time() + SCENARIO_TIMEOUT
+            while time.time() < end_t:
+                rclpy.spin_once(monitor, timeout_sec=0.1)
+                if monitor.trajectory:
+                    _, x, y, _ = monitor.trajectory[-1]
+                    if np.hypot(x - scenario["goal_x"], y - scenario["goal_y"]) < 0.5:
+                        break
+
+            monitor.stop()
+            score, metrics = compute_score(monitor, (scenario["goal_x"], scenario["goal_y"]))
+            monitor.destroy_node()
+            rclpy.shutdown()
+
+        except Exception as e:
+            print(f"    [ERROR] {scenario['name']}: {e}")
+            score   = 0.0
+            metrics = {"error": str(e), "score": 0.0}
+        finally:
+            bag.stop()
+            self._sim.kill()
+
+        metrics["scenario"] = scenario["name"]
+        metrics["weight"]   = scenario["weight"]
+        return metrics
+
+    # ── Objective function for hyperopt ──────────────────────────────────────
+
+    def _objective(self, params: dict) -> dict:
+        self._trial_num += 1
+        trial_num  = self._trial_num
+        trial_dir  = RESULTS_DIR / f"trial_{trial_num:03d}"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+
+        print(f"\n{'='*60}")
+        print(f"  Trial {trial_num:03d}  {datetime.now().strftime('%H:%M:%S')}")
+        print(f"  { {k: f'{v:.3f}' for k, v in params.items()} }")
+        print(f"{'='*60}")
+
+        # 1. Write per-trial YAML snapshot
+        trial_yaml_data  = build_trial_yaml(self._base_params, params, trial_num)
+        trial_params_path = trial_dir / "planner_params.yaml"
+        _save_yaml(trial_yaml_data, trial_params_path)
+
+        # 2. Run each scenario
+        t0                = time.time()
+        scenario_results  = []
+        aggregate_score   = 0.0
+
+        for scenario in SCENARIOS:
+            print(f"\n  ── {scenario['name']} (goal {scenario['goal_x']},{scenario['goal_y']}) ──")
+            result          = self._run_scenario(scenario, trial_params_path, trial_dir)
+            weighted        = result.get("score", 0.0) * scenario["weight"]
+            aggregate_score += weighted
+            scenario_results.append(result)
+            print(f"    reached={result.get('goal_reached')}  "
+                  f"score={result.get('score', 0):.3f}  "
+                  f"dist={result.get('dist_to_goal', '?')}")
+
+        elapsed = time.time() - t0
+
+        # 3. Fit GP surrogate on all data so far and extract kernel params
+        self._history.append({
+            "trial":  trial_num,
+            "params": {k: float(v) for k, v in params.items()},
+            "score":  float(aggregate_score),
+        })
+        gp_state = fit_gp_surrogate(self._history)
+        gp_state["trial"] = trial_num
+        gp_state["timestamp"] = datetime.utcnow().isoformat() + "Z"
+        self._gp_history.append(gp_state)
+        _save_json(gp_state, trial_dir / "gp_surrogate.json")
+
+        # 4. Snapshot TPE Trials state
+        tpe_state = serialize_tpe_state(self._hp_trials, trial_num)
+        _save_json(tpe_state, trial_dir / "tpe_state.json")
+
+        # 5. Full trial metadata
+        metadata = {
+            "trial":           trial_num,
+            "timestamp":       datetime.utcnow().isoformat() + "Z",
+            "params":          {k: float(v) for k, v in params.items()},
+            "aggregate_score": float(aggregate_score),
+            "elapsed_sec":     float(elapsed),
+            "scenarios":       scenario_results,
+            "gp_summary": {
+                "n_observations":    gp_state.get("n_observations"),
+                "noise_level":       gp_state.get("noise_level"),
+                "param_sensitivity": gp_state.get("param_sensitivity"),
+            },
+        }
+        _save_json(metadata, trial_dir / "metadata.json")
+
+        # 6. Track best and copy YAML
+        if aggregate_score > self._best_score:
+            self._best_score  = aggregate_score
+            self._best_params = {k: float(v) for k, v in params.items()}
+            self._best_trial  = trial_num
+            shutil.copy(trial_params_path, RESULTS_DIR / "best_planner_params.yaml")
+
+        # 7. Persist cumulative results + plots
+        self._persist(trial_num)
+
+        print(f"\n  aggregate={aggregate_score:.4f}  best={self._best_score:.4f}"
+              f"  elapsed={elapsed/60:.1f}min")
+
+        # hyperopt minimises loss
+        return {"loss": -aggregate_score, "status": STATUS_OK, "score": aggregate_score}
+
+    def _persist(self, trial_num: int) -> None:
+        summary = {
+            "best_score":  float(self._best_score),
+            "best_trial":  self._best_trial,
+            "best_params": self._best_params,
+            "trials":      [
+                {
+                    "trial":  t["trial"],
+                    "params": t["params"],
+                    "score":  t["score"],
+                    "is_best": t["trial"] == self._best_trial,
+                }
+                for t in self._history
+            ],
+        }
+        _save_json(summary,          RESULTS_DIR / "results.json")
+        _save_json(self._gp_history, RESULTS_DIR / "gp_history.json")
+
+        _plot_convergence(
+            [{"score": t["score"]} for t in self._history],
+            RESULTS_DIR / "convergence.png",
+        )
+        _plot_param_importance(self._gp_history, RESULTS_DIR / "param_importance.png")
+        _plot_length_scales(self._gp_history,    RESULTS_DIR / "length_scales.png")
+
+    # ── Entry point ───────────────────────────────────────────────────────────
+
+    def run(self, max_evals: int = MAX_EVALS, n_random: int = N_RANDOM_INIT) -> None:
+        print(f"\n{'#'*60}")
+        print(f"# Bayesian MPC Tuner — Go2 Gazebo")
+        print(f"# Trials: {max_evals}  |  Random init: {n_random}")
+        print(f"# Scenarios per trial: {len(SCENARIOS)}")
+        print(f"# Est. time: ~{max_evals * len(SCENARIOS) * (PLANNER_DELAY_SEC + SCENARIO_TIMEOUT + 10) / 3600:.1f}h")
+        print(f"# Results: {RESULTS_DIR}")
+        print(f"{'#'*60}\n")
+
+        try:
+            fmin(
+                fn=self._objective,
+                space=SEARCH_SPACE,
+                algo=tpe.suggest,
+                max_evals=max_evals,
+                trials=self._hp_trials,
+                rstate=np.random.default_rng(42),
+                show_progressbar=False,
+            )
+        except KeyboardInterrupt:
+            print("\n[Interrupted] Saving partial results…")
+        finally:
+            self._persist(self._trial_num)
+
+        print(f"\n{'='*60}")
+        print(f"  COMPLETE — best score: {self._best_score:.4f} (trial {self._best_trial})")
+        if self._best_params:
+            for k, v in self._best_params.items():
+                print(f"    {k}: {v:.4f}")
+        print(f"  Deploy:  cp {RESULTS_DIR}/best_planner_params.yaml \\")
+        print(f"              {BASE_PARAMS}")
+        print(f"{'='*60}")
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Bayesian MPC tuner for Go2")
+    ap.add_argument("--trials",  type=int, default=MAX_EVALS,    help="Total trials")
+    ap.add_argument("--random",  type=int, default=N_RANDOM_INIT, help="Random init trials")
+    args = ap.parse_args()
+
+    BayesianMPCTuner().run(max_evals=args.trials, n_random=args.random)

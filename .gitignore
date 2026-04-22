@@ -14,3 +14,7 @@ __pycache__/
 # Editor / OS
 .vscode/
 .DS_Store
+
+# Tuning artifacts
+tuning_results/**/rosbag/
+*.db3
