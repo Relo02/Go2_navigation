@@ -20,21 +20,21 @@
     mpc_vy_max: 0.5
     mpc_omega_max: 1.5
     mpc_v_ref: 0.5
-    mpc_Q_xy: 395.5353789944192
+    mpc_Q_xy: 307.7276535535487
     mpc_Q_yaw: 0.1
     mpc_Q_terminal: 100.0
-    mpc_R_vel: 1.9900529592717924
+    mpc_R_vel: 0.5558211316295016
     mpc_R_omega: 0.5
     mpc_R_jerk: 1.0
-    mpc_W_obs_sigmoid: 359.3743189154154
+    mpc_W_obs_sigmoid: 266.1812979455511
     mpc_obs_alpha: 4.0
-    mpc_obs_r: 0.7568277038201439
+    mpc_obs_r: 0.42348139364251386
     mpc_max_obs_constraints: 12
     mpc_obs_check_radius: 3.0
     mpc_max_iter: 100
     mpc_warm_start: true
     mpc_rate_hz: 10.0
-    mpc_lookahead_dist: 1.740237995353282
+    mpc_lookahead_dist: 0.6473220509010482
     max_lidar_range: 6.0
     mpc_path_resample_ds: 0.15
     mpc_path_smooth_window: 7
@@ -60,5 +60,5 @@
     cmd_max_ax: 1.0
     cmd_max_ay: 0.8
     cmd_max_alpha: 1.5
-    _tuning_trial: 1
-    _tuning_timestamp: 2026-04-22T21:08:48.269460+02:00Z
+    _tuning_trial: 3
+    _tuning_timestamp: 2026-04-22T21:18:33.687995+02:00Z

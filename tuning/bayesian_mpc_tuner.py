@@ -277,6 +277,8 @@ class PerformanceMonitor(Node):
         self.cmd_history: list   = []   # [(t, vx, vy, wz)]
         self.mpc_diag: list      = []   # [(t, success, cost, solve_ms, avg_ms, fails, security, vx_eff)]
         self.predicted_paths: list = [] # [(t, n_waypoints, last_wx, last_wy)] — lightweight summary
+        self.obs_dist_history: list = [] # [(t, min_dist_this_scan)] — per-scan closest obstacle
+        self.n_cloud_msgs: int   = 0    # number of LiDAR scans received (0 = detection failure)
         self.min_obs_dist: float = float("inf")
         self.recording   = False
         self.start_time  = None
@@ -301,6 +303,8 @@ class PerformanceMonitor(Node):
         self.cmd_history.clear()
         self.mpc_diag.clear()
         self.predicted_paths.clear()
+        self.obs_dist_history.clear()
+        self.n_cloud_msgs = 0
         self.min_obs_dist = float("inf")
         self.start_time   = time.time()
         self.goal_pos     = (goal_x, goal_y)
@@ -369,11 +373,8 @@ class PerformanceMonitor(Node):
         ))
 
     def _on_cloud(self, msg: PointCloud2) -> None:
-        # Minimal distance estimate from field 'x' of the first few points
         if not self.recording or msg.width == 0:
             return
-        # Read first 32 bytes of data to get a rough closest-point estimate
-        # (avoids importing sensor_msgs_py for speed)
         try:
             import struct
             point_step = msg.point_step
@@ -384,7 +385,13 @@ class PerformanceMonitor(Node):
                 x, y, z = struct.unpack_from("fff", bytes(msg.data[off:off+12]))
                 dists.append(np.hypot(x, y))
             if dists:
-                self.min_obs_dist = min(self.min_obs_dist, min(dists))
+                scan_min = min(dists)
+                self.min_obs_dist = min(self.min_obs_dist, scan_min)
+                self.obs_dist_history.append((
+                    time.time() - self.start_time,
+                    scan_min,
+                ))
+                self.n_cloud_msgs += 1
         except Exception:
             pass
 
@@ -424,8 +431,31 @@ def compute_score(monitor: PerformanceMonitor, goal: tuple) -> tuple:
     else:
         mean_jerk, smoothness = 0.0, 0.0
 
-    # Safety
-    safety = 1.0 if monitor.min_obs_dist > 0.3 else 0.0
+    # Obstacle avoidance — continuous score derived from per-scan distances
+    # Requires at least 5 LiDAR scans; penalises if detection failed entirely.
+    _DANGER_THRESH  = 0.3   # m — critical proximity
+    _WARNING_THRESH = 0.6   # m — caution zone
+    obstacle_detected = monitor.n_cloud_msgs >= 5
+    if not obstacle_detected:
+        # No LiDAR data received — treat as sensor failure, score 0
+        obs_avoidance_score = 0.0
+        danger_frac  = float("nan")
+        warning_frac = float("nan")
+        mean_clearance = float("nan")
+    else:
+        scan_dists = np.array([d for _, d in monitor.obs_dist_history])
+        danger_frac   = float(np.mean(scan_dists < _DANGER_THRESH))
+        warning_frac  = float(np.mean(
+            (scan_dists >= _DANGER_THRESH) & (scan_dists < _WARNING_THRESH)
+        ))
+        mean_clearance = float(np.mean(np.minimum(scan_dists, 2.0)))
+        # Weights: stay out of danger (50%), minimise warning-zone time (30%),
+        #          reward higher mean clearance up to 2 m (20%)
+        obs_avoidance_score = (
+            (1.0 - danger_frac)  * 0.50
+            + (1.0 - warning_frac) * 0.30
+            + min(mean_clearance / 2.0, 1.0) * 0.20
+        )
 
     # Time efficiency (only if goal reached)
     if goal_reached and monitor.trajectory:
@@ -436,27 +466,39 @@ def compute_score(monitor: PerformanceMonitor, goal: tuple) -> tuple:
         time_score = 0.0
 
     if goal_reached:
-        score = (0.30 * 1.0 + 0.25 * efficiency + 0.20 * smoothness
-                 + 0.15 * safety + 0.10 * time_score)
+        # Weights sum to 1.0
+        score = (0.35 * 1.0
+                 + 0.20 * efficiency
+                 + 0.15 * smoothness
+                 + 0.20 * obs_avoidance_score
+                 + 0.10 * time_score)
     else:
-        score = (0.30 * progress_frac + 0.10 * efficiency
-                 + 0.10 * smoothness  + 0.10 * safety)
+        # Max achievable ~0.60 — acts as an implicit goal-reaching penalty
+        score = (0.25 * progress_frac
+                 + 0.10 * efficiency
+                 + 0.10 * smoothness
+                 + 0.15 * obs_avoidance_score)
 
     metrics = {
-        "goal_reached":    goal_reached,
-        "dist_to_goal":    dist_to_goal,
-        "progress_frac":   progress_frac,
-        "path_length":     path_len,
-        "efficiency":      efficiency,
-        "mean_jerk":       mean_jerk,
-        "smoothness":      smoothness,
-        "min_obs_dist":    float(monitor.min_obs_dist),
-        "safety_score":    safety,
-        "time_score":      time_score,
-        "elapsed_sec":     float(monitor.trajectory[-1][0]) if monitor.trajectory else 0.0,
-        "n_traj_points":   len(monitor.trajectory),
-        "n_cmd_points":    len(monitor.cmd_history),
-        "score":           float(score),
+        "goal_reached":        goal_reached,
+        "dist_to_goal":        dist_to_goal,
+        "progress_frac":       progress_frac,
+        "path_length":         path_len,
+        "efficiency":          efficiency,
+        "mean_jerk":           mean_jerk,
+        "smoothness":          smoothness,
+        "min_obs_dist":        float(monitor.min_obs_dist),
+        "obstacle_detected":   obstacle_detected,
+        "n_cloud_msgs":        monitor.n_cloud_msgs,
+        "obs_danger_frac":     danger_frac,
+        "obs_warning_frac":    warning_frac,
+        "obs_mean_clearance":  mean_clearance,
+        "obs_avoidance_score": float(obs_avoidance_score),
+        "time_score":          time_score,
+        "elapsed_sec":         float(monitor.trajectory[-1][0]) if monitor.trajectory else 0.0,
+        "n_traj_points":       len(monitor.trajectory),
+        "n_cmd_points":        len(monitor.cmd_history),
+        "score":               float(score),
     }
 
     # ── MPC diagnostics summary (from /mpc/diagnostics) ──────────────────
@@ -763,9 +805,14 @@ class BayesianMPCTuner:
             weighted        = result.get("score", 0.0) * scenario["weight"]
             aggregate_score += weighted
             scenario_results.append(result)
+            obs_det = result.get("obstacle_detected")
+            obs_sc  = result.get("obs_avoidance_score", float("nan"))
             print(f"    reached={result.get('goal_reached')}  "
                   f"score={result.get('score', 0):.3f}  "
-                  f"dist={result.get('dist_to_goal', '?')}")
+                  f"dist={result.get('dist_to_goal', '?'):.2f}  "
+                  f"obs_detected={obs_det}  "
+                  f"obs_avoidance={obs_sc:.3f}  "
+                  f"n_scans={result.get('n_cloud_msgs', 0)}")
 
         elapsed = time.time() - t0
 
