@@ -17,39 +17,90 @@
   Robot start pose: x=0, y=0 (central aisle, clear of shelves).
   Goal poses: corners and aisle ends work well for path planning tests.
 -->
-<sdf version="1.6">
+<sdf version="1.8">
   <world name="warehouse">
 
-    <include><uri>model://ground_plane</uri></include>
+    <physics name="1ms" type="dart">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- ── World system plugins (Fortress: ignition:: namespace) ── -->
+    <plugin
+      filename="ignition-gazebo-physics-system"
+      name="ignition::gazebo::systems::Physics">
+    </plugin>
+
+    <plugin
+      filename="ignition-gazebo-sensors-system"
+      name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <plugin
+      filename="ignition-gazebo-imu-system"
+      name="ignition::gazebo::systems::Imu">
+    </plugin>
+
+    <plugin
+      filename="ignition-gazebo-contact-system"
+      name="ignition::gazebo::systems::Contact">
+    </plugin>
+
+    <plugin
+      filename="ignition-gazebo-user-commands-system"
+      name="ignition::gazebo::systems::UserCommands">
+    </plugin>
+
+    <plugin
+      filename="ignition-gazebo-scene-broadcaster-system"
+      name="ignition::gazebo::systems::SceneBroadcaster">
+    </plugin>
 
     <!-- Directional warehouse lighting -->
     <light name="light_main" type="directional">
+      <cast_shadows>true</cast_shadows>
       <pose>0 0 15 0 0.3 0</pose>
       <diffuse>0.9 0.9 0.9 1</diffuse>
       <specular>0.1 0.1 0.1 1</specular>
       <attenuation><range>100</range><constant>0.9</constant><linear>0.01</linear><quadratic>0.001</quadratic></attenuation>
       <direction>-0.5 0.1 -0.9</direction>
-      <cast_shadows>true</cast_shadows>
     </light>
     <light name="light_fill" type="directional">
+      <cast_shadows>false</cast_shadows>
       <pose>0 0 15 0 -0.3 3.14</pose>
       <diffuse>0.4 0.4 0.5 1</diffuse>
       <specular>0.0 0.0 0.0 1</specular>
       <direction>0.5 -0.1 -0.9</direction>
-      <cast_shadows>false</cast_shadows>
     </light>
 
-    <physics name="default" default="0" type="ode">
-      <max_step_size>0.001</max_step_size>
-      <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>1000</real_time_update_rate>
-    </physics>
-
-    <scene>
-      <ambient>0.3 0.3 0.3 1</ambient>
-      <background>0.2 0.2 0.25 1</background>
-      <shadows>true</shadows>
-    </scene>
+    <!-- ── Ground plane (100×100 m, inline — no Fuel download required) ── -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
 
     <!-- ── Perimeter walls (30 m × 20 m, thickness 0.2 m, height 4 m) ── -->
     <model name="wall_south">

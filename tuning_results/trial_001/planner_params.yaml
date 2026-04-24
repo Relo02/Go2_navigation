@@ -20,10 +20,12 @@
     mpc_vy_max: 0.5
     mpc_omega_max: 1.5
     mpc_v_ref: 0.5
-    mpc_Q_xy: 395.5353789944192
+    mpc_Q_x: 372.0013066008948
+    mpc_Q_y: 101.20832023262321
     mpc_Q_yaw: 0.1
     mpc_Q_terminal: 100.0
-    mpc_R_vel: 1.9900529592717924
+    mpc_R_vx: 2.3267835535195904
+    mpc_R_vy: 1.9900529592717924
     mpc_R_omega: 0.5
     mpc_R_jerk: 1.0
     mpc_W_obs_sigmoid: 359.3743189154154
@@ -61,4 +63,4 @@
     cmd_max_ay: 0.8
     cmd_max_alpha: 1.5
     _tuning_trial: 1
-    _tuning_timestamp: 2026-04-22T21:08:48.269460+02:00Z
+    _tuning_timestamp: 2026-04-25T00:02:01.021279+02:00Z

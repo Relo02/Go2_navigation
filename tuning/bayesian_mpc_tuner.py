@@ -75,7 +75,7 @@ PARAM_NAMES  = list(SEARCH_SPACE.keys())
 
 MAX_EVALS         = 30
 N_RANDOM_INIT     = 8
-SCENARIO_TIMEOUT  = 60      # seconds to wait for goal reached
+SCENARIO_TIMEOUT  = 120     # seconds to wait for all goals reached (multi-goal scenarios)
 PLANNER_DELAY_SEC = 30      # seconds for Gazebo to stabilise
 CLEANUP_WAIT_SEC  = 5
 
@@ -102,64 +102,108 @@ BAG_TOPICS = [
 #
 # robot_x/y/heading: spawn pose (world_init_* launch args).
 #
-# goal_x/y: navigation goal sent via /goal_pose after planner startup.
+# goals: ordered list of [x, y] waypoints. The robot must reach each in sequence.
+#        The first goal is also sent to the launch system via goal_x/goal_y args.
+#        Use a per-scenario "timeout" key (seconds) to override SCENARIO_TIMEOUT.
 #
 # Weights must sum to 1.0.
 SCENARIOS = [
-    # ── default.sdf: open flat world — probes fundamental motion patterns ──
+    # ── default.sdf: open flat world — probes fundamental motion quality ──
+    # Obstacles are placed ON each leg's midpoint, forcing active avoidance.
+    # L-shape (0→6,0 → 6,6 → 0,6): one cylinder per leg.
     {
-        "name": "open_forward",
+        "name": "open_square",
         "world": "default.sdf", "world_pkg": "go2_sim",
         "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
-        "goal_x":  6.0, "goal_y":  0.0,
-        "weight": 0.12,
-    },
-    {
-        "name": "open_diagonal",
-        "world": "default.sdf", "world_pkg": "go2_sim",
-        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
-        "goal_x":  5.0, "goal_y":  5.0,
-        "weight": 0.13,
-    },
-    {
-        "name": "open_lateral",
-        "world": "default.sdf", "world_pkg": "go2_sim",
-        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
-        "goal_x":  0.0, "goal_y":  6.0,
+        "goals": [[6.0, 0.0], [6.0, 6.0], [0.0, 6.0]],
+        "obstacles": [
+            {"x": 2.5, "y":  0.0},   # mid-leg 1: (0,0)→(6,0)
+            {"x": 6.0, "y":  2.5},   # mid-leg 2: (6,0)→(6,6)
+            {"x": 3.5, "y":  6.0},   # mid-leg 3: (6,6)→(0,6)
+        ],
         "weight": 0.10,
     },
+    # Zigzag: (0,0)→(-4,5)→(4,5)→(0,10). One obstacle per leg.
     {
-        "name": "open_oblique",
+        "name": "open_zigzag",
         "world": "default.sdf", "world_pkg": "go2_sim",
         "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
-        "goal_x": -3.0, "goal_y":  5.0,
+        "goals": [[-4.0, 5.0], [4.0, 5.0], [0.0, 10.0]],
+        "obstacles": [
+            {"x": -2.0, "y": 2.5},   # mid-leg 1
+            {"x":  0.0, "y": 5.0},   # mid-leg 2: the reversal point
+            {"x":  2.0, "y": 7.5},   # mid-leg 3
+        ],
         "weight": 0.10,
     },
-    # ── warehouse.world: 30×20 m warehouse with shelving rows and aisles ──
-    # robot starts at aisle centre (0, 0); goal probes forward-aisle tracking
+    # ── warehouse.world: 30×20 m (x: -15..15, y: -10..10) ──
+    # Shelves at y=±6 (depth ±0.5 m). Aisles: central (|y|<5.5), north/south (|y|>6.5).
+    # Cross-aisles at x≈-4 (gap between row-A and row-B) and x≈3.5 (row-B to row-C).
+    #
+    # warehouse_loop: south corridor → east turn → central aisle → north corridor.
+    # Obstacles placed along each leg among the existing shelf structure.
     {
-        "name": "warehouse_aisle",
+        "name": "warehouse_loop",
         "world": "warehouse.world", "world_pkg": "sim_worlds",
-        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
-        "goal_x":  8.0, "goal_y":  0.0,
+        "robot_x": -10.0, "robot_y": -8.0, "robot_heading": 0.0,
+        "goals": [[10.0, -8.0], [10.0, 0.0], [-10.0, 0.0], [-10.0, 8.0]],
+        "obstacles": [
+            {"x":  0.0, "y": -8.0},   # south corridor (leg 1 mid)
+            {"x": 10.0, "y": -4.0},   # east cross-aisle (leg 2 mid)
+            {"x":  2.0, "y":  0.0},   # central aisle east half (leg 3)
+            {"x": -6.0, "y":  0.0},   # central aisle west half (leg 3)
+        ],
+        "weight": 0.25,
+        "timeout": 180,
+    },
+    # warehouse_cross_aisle: north-south at x=-4 through the shelf cross-aisle,
+    # then east along central aisle, then south. Obstacles block each leg midpoint.
+    {
+        "name": "warehouse_cross_aisle",
+        "world": "warehouse.world", "world_pkg": "sim_worlds",
+        "robot_x": -4.0, "robot_y": 8.0, "robot_heading": -1.5708,
+        "goals": [[-4.0, 0.0], [4.0, 0.0], [4.0, -8.0]],
+        "obstacles": [
+            {"x": -4.0, "y":  4.0},   # mid of southward leg 1
+            {"x":  0.0, "y":  0.5},   # mid of eastward leg 2 (offset from centreline)
+            {"x":  4.0, "y": -4.0},   # mid of southward leg 3
+        ],
         "weight": 0.20,
+        "timeout": 150,
     },
-    # cross-aisle: requires lateral movement between shelving rows
+    # ── indoor_office.world: 20×15 m (x: -10..10, y: -7.5..7.5) ──
+    # Reception desk (0,-5.5). Cubicle dividers at y=±1.5.
+    # Meeting room NW, server room NE (north corridor x: -3.15..3.1).
+    #
+    # office_traverse: east of reception, north through open east corridor,
+    # then into the meeting/server north corridor. Obstacles mid each leg.
     {
-        "name": "warehouse_cross",
-        "world": "warehouse.world", "world_pkg": "sim_worlds",
-        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
-        "goal_x":  0.0, "goal_y":  5.0,
-        "weight": 0.15,
-    },
-    # ── indoor_office.world: 20×15 m office with cubicles and meeting room ──
-    # robot starts near south entrance (clear of furniture)
-    {
-        "name": "office_through",
+        "name": "office_traverse",
         "world": "indoor_office.world", "world_pkg": "sim_worlds",
-        "robot_x": 0.0, "robot_y": -4.0, "robot_heading": 0.0,
-        "goal_x":  4.0, "goal_y":  2.0,
+        "robot_x": 2.0, "robot_y": -6.0, "robot_heading": 1.5708,
+        "goals": [[4.0, 0.0], [4.0, 3.5], [1.0, 6.0]],
+        "obstacles": [
+            {"x": 3.0, "y": -3.0},   # mid of leg 1 (start → 4,0)
+            {"x": 4.2, "y":  2.0},   # mid of leg 2 (north, east of all dividers)
+            {"x": 2.5, "y":  5.0},   # mid of leg 3 (into north corridor)
+        ],
         "weight": 0.20,
+        "timeout": 150,
+    },
+    # office_corridor: west side → tight 0.7 m divider gap at x=-4 → east crossing.
+    # Obstacles on legs between and after the structural dividers.
+    {
+        "name": "office_corridor",
+        "world": "indoor_office.world", "world_pkg": "sim_worlds",
+        "robot_x": -4.0, "robot_y": -6.0, "robot_heading": 1.5708,
+        "goals": [[-4.0, 0.0], [4.0, 0.0], [4.0, 3.5]],
+        "obstacles": [
+            {"x": -3.5, "y": -3.0},  # mid of northward leg 1 (before tight gap)
+            {"x":  0.0, "y": -0.5},  # mid of eastward leg 2 (between divider rows)
+            {"x":  3.8, "y":  2.0},  # mid of northward leg 3
+        ],
+        "weight": 0.15,
+        "timeout": 150,
     },
 ]
 
@@ -272,14 +316,18 @@ class SimulationManager:
         robot_y       = scenario.get("robot_y", 0.0)
         robot_heading = scenario.get("robot_heading", 0.0)
 
+        # Support both legacy goal_x/goal_y and new multi-goal "goals" list.
+        goals = scenario.get("goals", [[scenario.get("goal_x", 0.0), scenario.get("goal_y", 0.0)]])
+        first_gx, first_gy = goals[0]
+
         cmd = _source_cmd(
             "ros2 launch robot_sim sim_a_star_mpc.launch.py"
             f" gui:=false"
             f" use_rviz:=false"
             f" planner_params:={params_yaml}"
             f" wait_for_goal:=false"
-            f" goal_x:={scenario['goal_x']}"
-            f" goal_y:={scenario['goal_y']}"
+            f" goal_x:={first_gx}"
+            f" goal_y:={first_gy}"
             f" goal_z:=0.0"
             f" planner_delay_sec:={PLANNER_DELAY_SEC}"
             f" world:={world_path}"
@@ -296,6 +344,30 @@ class SimulationManager:
         time.sleep(3)
         if self._proc.poll() is not None:
             raise RuntimeError("Simulation failed to start")
+
+    def spawn_obstacles(self, scenario: dict) -> None:
+        """Spawn path-blocking obstacles via the sim_scenarios CLI (uses /spawn_entity)."""
+        obstacles = scenario.get("obstacles", [])
+        for i, obs in enumerate(obstacles):
+            model = obs.get("model", "obstacle_cylinder")
+            name  = f"tuner_obs_{i}"
+            cmd = _source_cmd(
+                f"ros2 run sim_scenarios spawn_obstacle"
+                f" --name {name}"
+                f" --model {model}"
+                f" --x {obs['x']}"
+                f" --y {obs['y']}"
+                f" --z 0.5"
+            )
+            try:
+                subprocess.call(
+                    ["bash", "-c", cmd],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=12,
+                )
+            except subprocess.TimeoutExpired:
+                pass  # non-fatal — scenario continues without this obstacle
 
     def kill(self) -> None:
         if self._proc is not None:
@@ -371,6 +443,16 @@ class PerformanceMonitor(Node):
 
         self._goal_pub = self.create_publisher(PoseStamped, "/goal_pose", 10)
 
+    def publish_goal(self, goal_x: float, goal_y: float) -> None:
+        msg = PoseStamped()
+        msg.header.frame_id = "map"
+        msg.header.stamp    = self.get_clock().now().to_msg()
+        msg.pose.position.x = float(goal_x)
+        msg.pose.position.y = float(goal_y)
+        msg.pose.orientation.w = 1.0
+        self._goal_pub.publish(msg)
+        self.goal_pos = (goal_x, goal_y)
+
     def start(self, goal_x: float, goal_y: float) -> None:
         self.trajectory.clear()
         self.cmd_history.clear()
@@ -380,16 +462,8 @@ class PerformanceMonitor(Node):
         self.n_cloud_msgs = 0
         self.min_obs_dist = float("inf")
         self.start_time   = time.time()
-        self.goal_pos     = (goal_x, goal_y)
         self.recording    = True
-
-        msg = PoseStamped()
-        msg.header.frame_id = "map"
-        msg.header.stamp    = self.get_clock().now().to_msg()
-        msg.pose.position.x = float(goal_x)
-        msg.pose.position.y = float(goal_y)
-        msg.pose.orientation.w = 1.0
-        self._goal_pub.publish(msg)
+        self.publish_goal(goal_x, goal_y)
 
     def stop(self) -> None:
         self.recording = False
@@ -471,9 +545,11 @@ class PerformanceMonitor(Node):
 
 # ─── Score computation ────────────────────────────────────────────────────────
 
-def compute_score(monitor: PerformanceMonitor, goal: tuple) -> tuple:
+def compute_score(monitor: PerformanceMonitor, goal: tuple, goals_reached_frac: float = 1.0) -> tuple:
     """
     Compute a composite score in [0, 1] from the recorded scenario data.
+    goal: final waypoint (x, y) used for distance/progress metrics.
+    goals_reached_frac: fraction of ordered waypoints reached (0.0 – 1.0).
     Returns (score, metrics_dict).
     """
     if not monitor.trajectory:
@@ -539,21 +615,24 @@ def compute_score(monitor: PerformanceMonitor, goal: tuple) -> tuple:
         time_score = 0.0
 
     if goal_reached:
-        # Weights sum to 1.0
-        score = (0.35 * 1.0
-                 + 0.20 * efficiency
-                 + 0.15 * smoothness
+        # goals_reached_frac == 1.0 when all waypoints reached; gives bonus for multi-goal completion.
+        score = (0.25 * 1.0
+                 + 0.15 * goals_reached_frac
+                 + 0.18 * efficiency
+                 + 0.12 * smoothness
                  + 0.20 * obs_avoidance_score
                  + 0.10 * time_score)
     else:
-        # Max achievable ~0.60 — acts as an implicit goal-reaching penalty
-        score = (0.25 * progress_frac
-                 + 0.10 * efficiency
-                 + 0.10 * smoothness
-                 + 0.15 * obs_avoidance_score)
+        # Max achievable ~0.60 — implicit goal-reaching penalty.
+        score = (0.20 * goals_reached_frac
+                 + 0.15 * progress_frac
+                 + 0.08 * efficiency
+                 + 0.08 * smoothness
+                 + 0.09 * obs_avoidance_score)
 
     metrics = {
         "goal_reached":        goal_reached,
+        "goals_reached_frac":  float(goals_reached_frac),
         "dist_to_goal":        dist_to_goal,
         "progress_frac":       progress_frac,
         "path_length":         path_len,
@@ -813,27 +892,51 @@ class BayesianMPCTuner:
             self._sim.launch(params_yaml, scenario)
             bag.start()
 
-            # Wait for planner startup
-            time.sleep(PLANNER_DELAY_SEC + 5)
+            # Let Gazebo and the ROS bridge come up, then inject path obstacles
+            time.sleep(10)
+            self._sim.spawn_obstacles(scenario)
+            # Wait for the planner to fully connect (remaining budget)
+            time.sleep(max(PLANNER_DELAY_SEC - 5, 5))
 
             # Start ROS 2 monitor
             if rclpy.ok():
                 rclpy.shutdown()
             rclpy.init()
             monitor = PerformanceMonitor()
-            monitor.start(scenario["goal_x"], scenario["goal_y"])
 
-            # Spin until goal reached or timeout
-            end_t = time.time() + SCENARIO_TIMEOUT
+            # Multi-goal: extract ordered waypoints
+            goals = scenario.get(
+                "goals",
+                [[scenario.get("goal_x", 0.0), scenario.get("goal_y", 0.0)]],
+            )
+            timeout = scenario.get("timeout", SCENARIO_TIMEOUT)
+
+            monitor.start(goals[0][0], goals[0][1])
+
+            # Spin until all goals reached or timeout
+            current_idx   = 0
+            goals_reached = [False] * len(goals)
+            end_t = time.time() + timeout
             while time.time() < end_t:
                 rclpy.spin_once(monitor, timeout_sec=0.1)
                 if monitor.trajectory:
                     _, x, y, _ = monitor.trajectory[-1]
-                    if np.hypot(x - scenario["goal_x"], y - scenario["goal_y"]) < 0.5:
-                        break
+                    gx, gy = goals[current_idx]
+                    if np.hypot(x - gx, y - gy) < 0.5:
+                        goals_reached[current_idx] = True
+                        current_idx += 1
+                        if current_idx >= len(goals):
+                            break
+                        # Publish next waypoint
+                        monitor.publish_goal(goals[current_idx][0], goals[current_idx][1])
+
+            goals_reached_frac = sum(goals_reached) / len(goals)
+            final_goal = tuple(goals[-1])
 
             monitor.stop()
-            score, metrics = compute_score(monitor, (scenario["goal_x"], scenario["goal_y"]))
+            score, metrics = compute_score(monitor, final_goal, goals_reached_frac=goals_reached_frac)
+            metrics["n_goals"]           = len(goals)
+            metrics["goals_reached_frac"] = goals_reached_frac
             monitor.destroy_node()
             rclpy.shutdown()
 
@@ -873,17 +976,23 @@ class BayesianMPCTuner:
         aggregate_score   = 0.0
 
         for scenario in SCENARIOS:
-            print(f"\n  ── {scenario['name']} (goal {scenario['goal_x']},{scenario['goal_y']}) ──")
+            sc_goals = scenario.get(
+                "goals",
+                [[scenario.get("goal_x"), scenario.get("goal_y")]],
+            )
+            print(f"\n  ── {scenario['name']} ({len(sc_goals)} goals, final {sc_goals[-1][0]},{sc_goals[-1][1]}) ──")
             result          = self._run_scenario(scenario, trial_params_path, trial_dir)
             weighted        = result.get("score", 0.0) * scenario["weight"]
             aggregate_score += weighted
             scenario_results.append(result)
             obs_det = result.get("obstacle_detected")
             obs_sc  = result.get("obs_avoidance_score", float("nan"))
-            print(f"    reached={result.get('goal_reached')}  "
+            grf     = result.get("goals_reached_frac", float("nan"))
+            n_goals = result.get("n_goals", len(sc_goals))
+            print(f"    goals={grf:.0%}/{n_goals}  "
+                  f"final_reached={result.get('goal_reached')}  "
                   f"score={result.get('score', 0):.3f}  "
                   f"dist={result.get('dist_to_goal', float('nan')):.2f}  "
-                  f"obs_detected={obs_det}  "
                   f"obs_avoidance={obs_sc:.3f}  "
                   f"n_scans={result.get('n_cloud_msgs', 0)}")
 
@@ -969,7 +1078,8 @@ class BayesianMPCTuner:
         print(f"# Bayesian MPC Tuner — Go2 Gazebo")
         print(f"# Trials: {max_evals}  |  Random init: {n_random}")
         print(f"# Scenarios per trial: {len(SCENARIOS)}")
-        print(f"# Est. time: ~{max_evals * len(SCENARIOS) * (PLANNER_DELAY_SEC + SCENARIO_TIMEOUT + 10) / 3600:.1f}h")
+        secs_per_trial = sum(PLANNER_DELAY_SEC + s.get("timeout", SCENARIO_TIMEOUT) + 10 for s in SCENARIOS)
+        print(f"# Est. time: ~{max_evals * secs_per_trial / 3600:.1f}h")
         print(f"# Results: {RESULTS_DIR}")
         print(f"{'#'*60}\n")
 

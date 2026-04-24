@@ -134,6 +134,11 @@ class SetpointToCmdVelNode(Node):
 
     def _control_cb(self):
         if self._pose is None or self._setpoint is None or self._setpoint_rx_time is None:
+            self.get_logger().warn(
+                f'[CMD_VEL] Waiting — pose={self._pose is not None} '
+                f'setpoint={self._setpoint is not None}',
+                throttle_duration_sec=5.0,
+            )
             self._publish_zero()
             return
 
@@ -180,6 +185,14 @@ class SetpointToCmdVelNode(Node):
         cmd = self._apply_cmd_smoothing(raw_cmd)
 
         self._cmd_pub.publish(cmd)
+
+        stopped = dist <= self._stop_radius
+        self.get_logger().info(
+            f'[CMD_VEL] robot=({px:.2f},{py:.2f})  setpt=({sx:.2f},{sy:.2f})  '
+            f'dist={dist:.2f}m{"  STOPPED" if stopped else ""}  '
+            f'vx={cmd.linear.x:+.2f}  vy={cmd.linear.y:+.2f}  wz={cmd.angular.z:+.2f}',
+            throttle_duration_sec=1.0,
+        )
 
 
 def main(args=None):

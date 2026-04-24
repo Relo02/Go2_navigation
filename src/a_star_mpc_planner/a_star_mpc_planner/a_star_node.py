@@ -244,9 +244,10 @@ class AStarNode(Node):
             self._lgpal_pub.publish(local_goal_msg)
 
             self.get_logger().info(
-                f'[A*] path={len(path)} wpts  '
-                f'local_goal=({path[-1][0]:.2f}, {path[-1][1]:.2f})  '
-                f'dist_global={dist_to_goal:.2f} m',
+                f'[A*] NAVIGATING  dist_to_goal={dist_to_goal:.2f} m  '
+                f'robot=({drone_xy[0]:.2f},{drone_xy[1]:.2f})  '
+                f'goal=({self._goal[0]:.2f},{self._goal[1]:.2f})  '
+                f'path={len(path)} wpts  local_goal=({path[-1][0]:.2f},{path[-1][1]:.2f})',
                 throttle_duration_sec=1.0,
             )
         else:
