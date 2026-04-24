@@ -72,12 +72,14 @@ class MPCConfig:
     v_ref: float = 0.5
 
     # Tracking cost weights  (applied to position/yaw states only)
-    Q_xy:       float = 20.0
+    Q_x:        float = 20.0   # x-axis position tracking (forward)
+    Q_y:        float = 20.0   # y-axis position tracking (lateral) — separate from Q_x
     Q_yaw:      float = 0.5
     Q_terminal: float = 50.0
 
     # Control-effort / smoothness weights
-    R_vel:   float = 1.0
+    R_vx:    float = 1.0   # forward velocity command effort
+    R_vy:    float = 1.0   # lateral velocity command effort — separate from R_vx
     R_omega: float = 0.5
     R_jerk:  float = 0.2
 
@@ -276,10 +278,10 @@ class MPCTracker:
         p_omega_max = opti.parameter()
 
         # Weight matrices — only position/yaw tracked, velocity states free
-        q   = np.array([cfg.Q_xy, cfg.Q_xy, cfg.Q_yaw, 0.0, 0.0, 0.0])
+        q   = np.array([cfg.Q_x, cfg.Q_y, cfg.Q_yaw, 0.0, 0.0, 0.0])
         Q   = np.diag(q)
         Q_T = np.diag(q * cfg.Q_terminal)
-        R   = np.diag([cfg.R_vel, cfg.R_vel, cfg.R_omega])
+        R   = np.diag([cfg.R_vx, cfg.R_vy, cfg.R_omega])
 
         # ── Objective ────────────────────────────────────────────────
         cost = 0.0

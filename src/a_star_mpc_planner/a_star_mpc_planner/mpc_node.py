@@ -78,11 +78,13 @@ class MPCNode(Node):
         self.declare_parameter('mpc_vy_max',       0.5)
         self.declare_parameter('mpc_omega_max',    1.5)
         self.declare_parameter('mpc_v_ref',        0.5)
-        self.declare_parameter('mpc_Q_xy',        20.0)
-        self.declare_parameter('mpc_Q_yaw',        0.5)
-        self.declare_parameter('mpc_Q_terminal',  50.0)
-        self.declare_parameter('mpc_R_vel',        1.0)
-        self.declare_parameter('mpc_R_omega',      0.5)
+        self.declare_parameter('mpc_Q_x',          20.0)
+        self.declare_parameter('mpc_Q_y',          20.0)
+        self.declare_parameter('mpc_Q_yaw',         0.5)
+        self.declare_parameter('mpc_Q_terminal',   50.0)
+        self.declare_parameter('mpc_R_vx',          1.0)
+        self.declare_parameter('mpc_R_vy',          1.0)
+        self.declare_parameter('mpc_R_omega',       0.5)
         self.declare_parameter('mpc_R_jerk',       0.2)
         self.declare_parameter('mpc_W_obs_sigmoid',       500.0)
         self.declare_parameter('mpc_obs_alpha',           8.0)
@@ -129,10 +131,12 @@ class MPCNode(Node):
             vy_max        = float(self.get_parameter('mpc_vy_max').value),
             omega_max     = float(self.get_parameter('mpc_omega_max').value),
             v_ref         = float(self.get_parameter('mpc_v_ref').value),
-            Q_xy          = float(self.get_parameter('mpc_Q_xy').value),
+            Q_x           = float(self.get_parameter('mpc_Q_x').value),
+            Q_y           = float(self.get_parameter('mpc_Q_y').value),
             Q_yaw         = float(self.get_parameter('mpc_Q_yaw').value),
             Q_terminal    = float(self.get_parameter('mpc_Q_terminal').value),
-            R_vel         = float(self.get_parameter('mpc_R_vel').value),
+            R_vx          = float(self.get_parameter('mpc_R_vx').value),
+            R_vy          = float(self.get_parameter('mpc_R_vy').value),
             R_omega       = float(self.get_parameter('mpc_R_omega').value),
             R_jerk        = float(self.get_parameter('mpc_R_jerk').value),
             W_obs_sigmoid       = float(self.get_parameter('mpc_W_obs_sigmoid').value),

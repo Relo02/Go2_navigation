@@ -45,14 +45,16 @@
     # ─────────────────────────────────────────────────────────────
     # Tracking cost weights
     # ─────────────────────────────────────────────────────────────
-    mpc_Q_xy: 150.0                 # xy position tracking weight
+    mpc_Q_x: 150.0                  # x-axis (forward) position tracking weight
+    mpc_Q_y: 150.0                  # y-axis (lateral) position tracking weight — tuned separately
     mpc_Q_yaw: 0.1                  # yaw tracking weight (low — A* segments are jagged)
     mpc_Q_terminal: 100.0          # terminal state weight multiplier
 
     # ─────────────────────────────────────────────────────────────
     # Control effort weights
     # ─────────────────────────────────────────────────────────────
-    mpc_R_vel: 0.5                 # linear velocity control effort
+    mpc_R_vx: 0.5                  # forward velocity command effort
+    mpc_R_vy: 0.5                  # lateral velocity command effort — tuned separately
     mpc_R_omega: 0.5               # angular velocity control effort
     mpc_R_jerk: 1.0                # stronger penalty on control-rate change for smoother motion
 

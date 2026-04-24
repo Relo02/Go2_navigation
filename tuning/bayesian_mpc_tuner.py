@@ -60,11 +60,13 @@ PKG_SETUP    = REPO_ROOT / "install/setup.bash"
 # ─── Search space ─────────────────────────────────────────────────────────────
 
 SEARCH_SPACE = {
-    "mpc_Q_xy":          hp.uniform("mpc_Q_xy",          50.0,  500.0),
-    "mpc_W_obs_sigmoid": hp.uniform("mpc_W_obs_sigmoid",  50.0,  400.0),
-    "mpc_obs_r":         hp.uniform("mpc_obs_r",           0.35,  0.85),
-    "mpc_R_vel":         hp.uniform("mpc_R_vel",            0.1,   3.0),
-    "mpc_lookahead_dist":hp.uniform("mpc_lookahead_dist",   0.5,   2.5),
+    "mpc_Q_x":           hp.uniform("mpc_Q_x",            50.0,  500.0),
+    "mpc_Q_y":           hp.uniform("mpc_Q_y",            50.0,  500.0),
+    "mpc_W_obs_sigmoid": hp.uniform("mpc_W_obs_sigmoid",   50.0,  400.0),
+    "mpc_obs_r":         hp.uniform("mpc_obs_r",            0.35,   0.85),
+    "mpc_R_vx":          hp.uniform("mpc_R_vx",             0.1,    3.0),
+    "mpc_R_vy":          hp.uniform("mpc_R_vy",             0.1,    3.0),
+    "mpc_lookahead_dist":hp.uniform("mpc_lookahead_dist",   0.5,    2.5),
 }
 
 PARAM_NAMES  = list(SEARCH_SPACE.keys())
@@ -92,11 +94,73 @@ BAG_TOPICS = [
     "/lidar/points_filtered",
 ]
 
-# Test scenarios — use worlds that exist in the repo
+# Test scenarios across three environments.
+#
+# world_pkg: ROS2 package that owns the world file.
+#   "go2_sim"   → share/go2_sim/worlds/<world>      (Ignition SDF)
+#   "sim_worlds" → share/sim_worlds/worlds/<world>   (SDF 1.6, Gazebo-compatible)
+#
+# robot_x/y/heading: spawn pose (world_init_* launch args).
+#
+# goal_x/y: navigation goal sent via /goal_pose after planner startup.
+#
+# Weights must sum to 1.0.
 SCENARIOS = [
-    {"name": "open",      "world": "default.sdf", "goal_x":  5.0, "goal_y":  0.0, "weight": 0.30},
-    {"name": "diagonal",  "world": "default.sdf", "goal_x":  5.0, "goal_y":  5.0, "weight": 0.40},
-    {"name": "lateral",   "world": "default.sdf", "goal_x":  0.0, "goal_y":  6.0, "weight": 0.30},
+    # ── default.sdf: open flat world — probes fundamental motion patterns ──
+    {
+        "name": "open_forward",
+        "world": "default.sdf", "world_pkg": "go2_sim",
+        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
+        "goal_x":  6.0, "goal_y":  0.0,
+        "weight": 0.12,
+    },
+    {
+        "name": "open_diagonal",
+        "world": "default.sdf", "world_pkg": "go2_sim",
+        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
+        "goal_x":  5.0, "goal_y":  5.0,
+        "weight": 0.13,
+    },
+    {
+        "name": "open_lateral",
+        "world": "default.sdf", "world_pkg": "go2_sim",
+        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
+        "goal_x":  0.0, "goal_y":  6.0,
+        "weight": 0.10,
+    },
+    {
+        "name": "open_oblique",
+        "world": "default.sdf", "world_pkg": "go2_sim",
+        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
+        "goal_x": -3.0, "goal_y":  5.0,
+        "weight": 0.10,
+    },
+    # ── warehouse.world: 30×20 m warehouse with shelving rows and aisles ──
+    # robot starts at aisle centre (0, 0); goal probes forward-aisle tracking
+    {
+        "name": "warehouse_aisle",
+        "world": "warehouse.world", "world_pkg": "sim_worlds",
+        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
+        "goal_x":  8.0, "goal_y":  0.0,
+        "weight": 0.20,
+    },
+    # cross-aisle: requires lateral movement between shelving rows
+    {
+        "name": "warehouse_cross",
+        "world": "warehouse.world", "world_pkg": "sim_worlds",
+        "robot_x": 0.0, "robot_y": 0.0, "robot_heading": 0.0,
+        "goal_x":  0.0, "goal_y":  5.0,
+        "weight": 0.15,
+    },
+    # ── indoor_office.world: 20×15 m office with cubicles and meeting room ──
+    # robot starts near south entrance (clear of furniture)
+    {
+        "name": "office_through",
+        "world": "indoor_office.world", "world_pkg": "sim_worlds",
+        "robot_x": 0.0, "robot_y": -4.0, "robot_heading": 0.0,
+        "goal_x":  4.0, "goal_y":  2.0,
+        "weight": 0.20,
+    },
 ]
 
 
@@ -195,12 +259,18 @@ class SimulationManager:
         self._proc = None
 
     def launch(self, params_yaml: Path, scenario: dict) -> None:
-        # Resolve world path
+        # Resolve world path — supports both go2_sim and sim_worlds packages
         world_rel = scenario["world"]
-        go2_share = subprocess.check_output(
-            ["bash", "-c", _source_cmd("ros2 pkg prefix go2_sim 2>/dev/null")],
-            text=True
-        ).strip() + f"/share/go2_sim/worlds/{world_rel}"
+        world_pkg = scenario.get("world_pkg", "go2_sim")
+        pkg_prefix = subprocess.check_output(
+            ["bash", "-c", _source_cmd(f"ros2 pkg prefix {world_pkg} 2>/dev/null")],
+            text=True,
+        ).strip()
+        world_path = f"{pkg_prefix}/share/{world_pkg}/worlds/{world_rel}"
+
+        robot_x       = scenario.get("robot_x", 0.0)
+        robot_y       = scenario.get("robot_y", 0.0)
+        robot_heading = scenario.get("robot_heading", 0.0)
 
         cmd = _source_cmd(
             "ros2 launch robot_sim sim_a_star_mpc.launch.py"
@@ -212,7 +282,10 @@ class SimulationManager:
             f" goal_y:={scenario['goal_y']}"
             f" goal_z:=0.0"
             f" planner_delay_sec:={PLANNER_DELAY_SEC}"
-            f" world:={go2_share}"
+            f" world:={world_path}"
+            f" world_init_x:={robot_x}"
+            f" world_init_y:={robot_y}"
+            f" world_init_heading:={robot_heading}"
         )
         self._proc = subprocess.Popen(
             ["bash", "-c", cmd],
