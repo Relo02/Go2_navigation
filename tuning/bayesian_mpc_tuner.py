@@ -882,7 +882,7 @@ class BayesianMPCTuner:
             obs_sc  = result.get("obs_avoidance_score", float("nan"))
             print(f"    reached={result.get('goal_reached')}  "
                   f"score={result.get('score', 0):.3f}  "
-                  f"dist={result.get('dist_to_goal', '?'):.2f}  "
+                  f"dist={result.get('dist_to_goal', float('nan')):.2f}  "
                   f"obs_detected={obs_det}  "
                   f"obs_avoidance={obs_sc:.3f}  "
                   f"n_scans={result.get('n_cloud_msgs', 0)}")
