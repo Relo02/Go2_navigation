@@ -37,7 +37,7 @@ from launch.actions import (
 )
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration, PythonExpression
 from launch_ros.parameter_descriptions import ParameterValue
 
 
@@ -276,10 +276,10 @@ def generate_launch_description():
             os.path.join(pkg_ros_ign_gazebo, "launch", "ign_gazebo.launch.py")
         ),
         launch_arguments={
-            "gz_args": [
-                LaunchConfiguration("world"),
-                " -r",  # start unpaused
-            ],
+            "gz_args": PythonExpression([
+                '"', LaunchConfiguration("world"), ' -r"',
+                ' + (" -s" if "', LaunchConfiguration("gui"), '" == "false" else "")',
+            ]),
         }.items(),
     )
 
