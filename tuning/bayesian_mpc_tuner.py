@@ -350,15 +350,18 @@ class SimulationManager:
             f" world_init_y:={robot_y}"
             f" world_init_heading:={robot_heading}"
         )
+        sim_log = RESULTS_DIR / "sim_launch.log"
+        sim_log.parent.mkdir(parents=True, exist_ok=True)
+        self._sim_log_fh = open(sim_log, "w")
         self._proc = subprocess.Popen(
             ["bash", "-c", cmd],
             preexec_fn=os.setsid,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=self._sim_log_fh,
+            stderr=self._sim_log_fh,
         )
         time.sleep(3)
         if self._proc.poll() is not None:
-            raise RuntimeError("Simulation failed to start")
+            raise RuntimeError(f"Simulation failed to start — see {sim_log}")
 
     def spawn_obstacles(self, scenario: dict) -> None:
         """Spawn path-blocking obstacles via the sim_scenarios CLI (uses /spawn_entity)."""
@@ -392,6 +395,9 @@ class SimulationManager:
             except Exception:
                 pass
             self._proc = None
+        if hasattr(self, "_sim_log_fh") and self._sim_log_fh:
+            self._sim_log_fh.close()
+            self._sim_log_fh = None
         # Belt-and-suspenders: nuke any lingering processes
         for pattern in [
             "ign gazebo", "gzserver", "gzclient",
