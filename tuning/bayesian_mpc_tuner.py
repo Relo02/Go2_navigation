@@ -78,6 +78,7 @@ N_RANDOM_INIT     = 8
 SCENARIO_TIMEOUT  = 120     # seconds to wait for all goals reached (multi-goal scenarios)
 PLANNER_DELAY_SEC = 30      # seconds for Gazebo to stabilise
 CLEANUP_WAIT_SEC  = 5
+NAV_LOG_INTERVAL  = 5.0     # seconds between navigation status lines
 
 # Topics recorded in every rosbag
 BAG_TOPICS = [
@@ -214,6 +215,19 @@ def _source_cmd(cmd: str) -> str:
     return f"source {ROS_SETUP} && source {PKG_SETUP} && {cmd}"
 
 
+def _log_wait(seconds: float, prefix: str = "") -> None:
+    """Sleep for `seconds`, printing a progress line every 10 s."""
+    step = 10
+    elapsed = 0.0
+    while elapsed < seconds:
+        chunk = min(step, seconds - elapsed)
+        time.sleep(chunk)
+        elapsed += chunk
+        remaining = seconds - elapsed
+        if remaining > 0:
+            print(f"{prefix} …{remaining:.0f}s remaining", flush=True)
+
+
 def _save_json(data, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
@@ -322,8 +336,8 @@ class SimulationManager:
 
         cmd = _source_cmd(
             "ros2 launch robot_sim sim_a_star_mpc.launch.py"
-            f" gui:=false"
-            f" use_rviz:=false"
+            f" gui:=true"
+            f" use_rviz:=true"
             f" planner_params:={params_yaml}"
             f" wait_for_goal:=false"
             f" goal_x:={first_gx}"
@@ -893,10 +907,13 @@ class BayesianMPCTuner:
             bag.start()
 
             # Let Gazebo and the ROS bridge come up, then inject path obstacles
+            print(f"    [setup] waiting 10 s for Gazebo bridge…", flush=True)
             time.sleep(10)
+            print(f"    [setup] spawning obstacles…", flush=True)
             self._sim.spawn_obstacles(scenario)
-            # Wait for the planner to fully connect (remaining budget)
-            time.sleep(max(PLANNER_DELAY_SEC - 5, 5))
+            remaining_delay = max(PLANNER_DELAY_SEC - 10, 5)
+            print(f"    [setup] waiting {remaining_delay} s for planner to connect…", flush=True)
+            _log_wait(remaining_delay, prefix="    [setup]")
 
             # Start ROS 2 monitor
             if rclpy.ok():
@@ -912,26 +929,79 @@ class BayesianMPCTuner:
             timeout = scenario.get("timeout", SCENARIO_TIMEOUT)
 
             monitor.start(goals[0][0], goals[0][1])
+            print(f"    [nav] starting — {len(goals)} goal(s), timeout {timeout}s", flush=True)
 
             # Spin until all goals reached or timeout
             current_idx   = 0
             goals_reached = [False] * len(goals)
-            end_t = time.time() + timeout
+            end_t         = time.time() + timeout
+            last_log_t    = 0.0
+            nav_start_t   = time.time()
             while time.time() < end_t:
                 rclpy.spin_once(monitor, timeout_sec=0.1)
+                now = time.time()
                 if monitor.trajectory:
                     _, x, y, _ = monitor.trajectory[-1]
                     gx, gy = goals[current_idx]
-                    if np.hypot(x - gx, y - gy) < 0.5:
+                    dist = np.hypot(x - gx, y - gy)
+                    if dist < 0.5:
                         goals_reached[current_idx] = True
+                        print(
+                            f"    [nav] goal {current_idx+1}/{len(goals)} reached  "
+                            f"pos=({x:.2f},{y:.2f})  "
+                            f"elapsed={now-nav_start_t:.0f}s",
+                            flush=True,
+                        )
                         current_idx += 1
                         if current_idx >= len(goals):
                             break
-                        # Publish next waypoint
                         monitor.publish_goal(goals[current_idx][0], goals[current_idx][1])
+                        print(
+                            f"    [nav] → next goal {current_idx+1}/{len(goals)}: "
+                            f"({goals[current_idx][0]:.1f},{goals[current_idx][1]:.1f})",
+                            flush=True,
+                        )
+
+                    # Periodic status line
+                    if now - last_log_t >= NAV_LOG_INTERVAL:
+                        elapsed   = now - nav_start_t
+                        remaining = end_t - now
+                        vx = vy = 0.0
+                        if monitor.cmd_history:
+                            _, vx, vy, _ = monitor.cmd_history[-1]
+                        mpc_ok_pct = solve_ms = float("nan")
+                        if monitor.mpc_diag:
+                            recent = monitor.mpc_diag[-1]
+                            mpc_ok_pct = sum(1 for d in monitor.mpc_diag[-20:] if d[1] > 0.5) / min(len(monitor.mpc_diag), 20) * 100
+                            solve_ms   = recent[3]
+                        print(
+                            f"    [nav {elapsed:5.1f}s / {timeout}s remaining {remaining:.0f}s]  "
+                            f"pos=({x:.2f},{y:.2f})  "
+                            f"goal[{current_idx+1}/{len(goals)}]=({gx:.1f},{gy:.1f})  "
+                            f"dist={dist:.2f}m  "
+                            f"cmd=({vx:.2f},{vy:.2f})  "
+                            f"mpc_ok={mpc_ok_pct:.0f}%  solve={solve_ms:.1f}ms",
+                            flush=True,
+                        )
+                        last_log_t = now
+                elif now - last_log_t >= NAV_LOG_INTERVAL:
+                    elapsed   = now - nav_start_t
+                    remaining = end_t - now
+                    print(
+                        f"    [nav {elapsed:5.1f}s / {timeout}s remaining {remaining:.0f}s]  "
+                        f"waiting for pose…",
+                        flush=True,
+                    )
+                    last_log_t = now
 
             goals_reached_frac = sum(goals_reached) / len(goals)
             final_goal = tuple(goals[-1])
+            print(
+                f"    [nav] done — goals {sum(goals_reached)}/{len(goals)}  "
+                f"frac={goals_reached_frac:.0%}  "
+                f"elapsed={time.time()-nav_start_t:.0f}s",
+                flush=True,
+            )
 
             monitor.stop()
             score, metrics = compute_score(monitor, final_goal, goals_reached_frac=goals_reached_frac)
@@ -941,7 +1011,7 @@ class BayesianMPCTuner:
             rclpy.shutdown()
 
         except Exception as e:
-            print(f"    [ERROR] {scenario['name']}: {e}")
+            print(f"    [ERROR] {scenario['name']}: {e}", flush=True)
             score   = 0.0
             metrics = {"error": str(e), "score": 0.0}
         finally:
@@ -960,10 +1030,10 @@ class BayesianMPCTuner:
         trial_dir  = RESULTS_DIR / f"trial_{trial_num:03d}"
         trial_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"\n{'='*60}")
-        print(f"  Trial {trial_num:03d}  {datetime.now().strftime('%H:%M:%S')}")
-        print(f"  { {k: f'{v:.3f}' for k, v in params.items()} }")
-        print(f"{'='*60}")
+        print(f"\n{'='*60}", flush=True)
+        print(f"  Trial {trial_num:03d}  {datetime.now().strftime('%H:%M:%S')}", flush=True)
+        print(f"  { {k: f'{v:.3f}' for k, v in params.items()} }", flush=True)
+        print(f"{'='*60}", flush=True)
 
         # 1. Write per-trial YAML snapshot
         trial_yaml_data  = build_trial_yaml(self._base_params, params, trial_num)
@@ -980,7 +1050,7 @@ class BayesianMPCTuner:
                 "goals",
                 [[scenario.get("goal_x"), scenario.get("goal_y")]],
             )
-            print(f"\n  ── {scenario['name']} ({len(sc_goals)} goals, final {sc_goals[-1][0]},{sc_goals[-1][1]}) ──")
+            print(f"\n  ── {scenario['name']} ({len(sc_goals)} goals, final {sc_goals[-1][0]},{sc_goals[-1][1]}) ──", flush=True)
             result          = self._run_scenario(scenario, trial_params_path, trial_dir)
             weighted        = result.get("score", 0.0) * scenario["weight"]
             aggregate_score += weighted
@@ -994,7 +1064,7 @@ class BayesianMPCTuner:
                   f"score={result.get('score', 0):.3f}  "
                   f"dist={result.get('dist_to_goal', float('nan')):.2f}  "
                   f"obs_avoidance={obs_sc:.3f}  "
-                  f"n_scans={result.get('n_cloud_msgs', 0)}")
+                  f"n_scans={result.get('n_cloud_msgs', 0)}", flush=True)
 
         elapsed = time.time() - t0
 
@@ -1041,7 +1111,7 @@ class BayesianMPCTuner:
         self._persist(trial_num)
 
         print(f"\n  aggregate={aggregate_score:.4f}  best={self._best_score:.4f}"
-              f"  elapsed={elapsed/60:.1f}min")
+              f"  elapsed={elapsed/60:.1f}min", flush=True)
 
         # hyperopt minimises loss
         return {"loss": -aggregate_score, "status": STATUS_OK, "score": aggregate_score}
