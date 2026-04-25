@@ -271,6 +271,12 @@ class AStarPlanner:
 
                 if not self._is_free(grid_map, nix, niy):
                     continue
+                # Prevent diagonal moves through blocked corners — without this
+                # the path squeezes through gaps the physical robot body cannot fit.
+                if ddx != 0 and ddy != 0:
+                    if (not self._is_free(grid_map, current.ix + ddx, current.iy) or
+                            not self._is_free(grid_map, current.ix, current.iy + ddy)):
+                        continue
                 if nkey in closed:
                     continue
 

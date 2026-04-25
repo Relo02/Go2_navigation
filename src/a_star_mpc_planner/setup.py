@@ -25,6 +25,7 @@ setup(
             'mpc_node = a_star_mpc_planner.mpc_node:main',
             'odom_to_pose_node = a_star_mpc_planner.odom_to_pose_node:main',
             'setpoint_to_cmd_vel_node = a_star_mpc_planner.setpoint_to_cmd_vel_node:main',
+            'nav_graph_node = a_star_mpc_planner.navigation_graph_node:main',
         ],
     },
 )

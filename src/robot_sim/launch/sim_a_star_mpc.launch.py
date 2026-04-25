@@ -235,6 +235,21 @@ def generate_launch_description():
         ],
     )
 
+    # ── 7. Navigation graph (topological global memory) ─────────────────────
+    nav_graph_node = Node(
+        package="a_star_mpc_planner",
+        executable="nav_graph_node",
+        name="nav_graph_node",
+        output="screen",
+        parameters=[
+            planner_params,
+            {"use_sim_time": use_sim_time},
+        ],
+        remappings=[
+            ("/global_goal", "/goal_pose"),
+        ],
+    )
+
     # Delay planner startup so Gazebo is fully initialised and publishing.
     planner_bringup = TimerAction(
         period=planner_delay,
@@ -244,6 +259,7 @@ def generate_launch_description():
             a_star_node,
             mpc_node,
             setpoint_to_cmd_vel,
+            nav_graph_node,
         ],
     )
 

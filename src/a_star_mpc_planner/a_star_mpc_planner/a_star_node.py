@@ -85,6 +85,7 @@ class AStarNode(Node):
         self._pose: PoseStamped | None = None
         self._lidar_points: np.ndarray | None = None
         self._goal_reached = False
+        self._nav_graph_wp: np.ndarray | None = None  # intermediate waypoint from NavGraphNode
 
         # ── QoS ───────────────────────────────────────────────────────
         sensor_qos = QoSProfile(
@@ -94,9 +95,10 @@ class AStarNode(Node):
         )
 
         # ── Subscribers ───────────────────────────────────────────────
-        self.create_subscription(PoseStamped, '/go2/pose', self._pose_cb, 10)
-        self.create_subscription(PoseStamped, '/global_goal', self._goal_cb, 10)
-        self.create_subscription(PointCloud2, '/lidar/points_filtered', self._lidar_cb, sensor_qos)
+        self.create_subscription(PoseStamped, '/go2/pose',             self._pose_cb,         10)
+        self.create_subscription(PoseStamped, '/global_goal',          self._goal_cb,         10)
+        self.create_subscription(PoseStamped, '/nav_graph/waypoint',   self._nav_graph_wp_cb, 10)
+        self.create_subscription(PointCloud2, '/lidar/points_filtered',self._lidar_cb,        sensor_qos)
 
         # ── Publishers ────────────────────────────────────────────────
         self._path_pub = self.create_publisher(Path, '/a_star/path', 10)
@@ -123,6 +125,9 @@ class AStarNode(Node):
 
     def _pose_cb(self, msg: PoseStamped):
         self._pose = msg
+
+    def _nav_graph_wp_cb(self, msg: PoseStamped) -> None:
+        self._nav_graph_wp = np.array([msg.pose.position.x, msg.pose.position.y])
 
     def _goal_cb(self, msg: PoseStamped):
         self._goal[0] = msg.pose.position.x
@@ -215,7 +220,10 @@ class AStarNode(Node):
         stamp = self.get_clock().now().to_msg()
 
         # === ONLINE REPLANNING: Run A* from CURRENT robot position ===
-        path = self._planner.plan(self._grid_map, drone_xy, self._goal[:2])
+        # Use nav graph waypoint as intermediate target when available
+        # (NavGraphNode only publishes when the final goal is outside the local grid)
+        planning_target = self._nav_graph_wp if self._nav_graph_wp is not None else self._goal[:2]
+        path = self._planner.plan(self._grid_map, drone_xy, planning_target)
 
         if path:
             # Publish path

@@ -6,9 +6,9 @@
     goal_z: 0.0
     grid_reso: 0.25
     grid_half_width: 10.0
-    grid_std: 0.15
+    grid_std: 0.3
     obstacle_threshold: 0.16
-    obstacle_cost_weight: 100.0
+    obstacle_cost_weight: 408.691149743741
     replan_rate_hz: 1.0
     goal_reached_radius: 0.3
     planning_height: 0.0
@@ -20,23 +20,23 @@
     mpc_vy_max: 0.5
     mpc_omega_max: 1.5
     mpc_v_ref: 0.5
-    mpc_Q_x: 372.0013066008948
-    mpc_Q_y: 101.20832023262321
-    mpc_Q_yaw: 0.1
-    mpc_Q_terminal: 100.0
-    mpc_R_vx: 2.3267835535195904
-    mpc_R_vy: 1.9900529592717924
-    mpc_R_omega: 0.5
-    mpc_R_jerk: 1.0
-    mpc_W_obs_sigmoid: 359.3743189154154
-    mpc_obs_alpha: 4.0
-    mpc_obs_r: 0.7568277038201439
+    mpc_Q_x: 77.37567670011043
+    mpc_Q_y: 88.66603493201839
+    mpc_Q_yaw: 1.9798687616219843
+    mpc_Q_terminal: 27.677093067213896
+    mpc_R_vx: 2.1751195314279888
+    mpc_R_vy: 0.4300091748324607
+    mpc_R_omega: 1.0395972035747583
+    mpc_R_jerk: 2.4725060386086066
+    mpc_W_obs_sigmoid: 318.7497392178816
+    mpc_obs_alpha: 7.187486378308308
+    mpc_obs_r: 0.6600594988383205
     mpc_max_obs_constraints: 12
     mpc_obs_check_radius: 3.0
     mpc_max_iter: 100
     mpc_warm_start: true
     mpc_rate_hz: 10.0
-    mpc_lookahead_dist: 1.740237995353282
+    mpc_lookahead_dist: 1.8034847994977878
     max_lidar_range: 6.0
     mpc_path_resample_ds: 0.15
     mpc_path_smooth_window: 7
@@ -49,6 +49,10 @@
     adaptive_vel_limits: true
     mpc_security_threshold: 0.25
     mpc_security_escape_radius: 3.0
+    nav_graph_node_spacing: 1.5
+    nav_graph_edge_radius: 4.0
+    nav_graph_waypoint_reach: 1.0
+    nav_graph_obs_threshold: 0.45
     cmd_rate_hz: 20.0
     cmd_kp_xy: 1.2
     cmd_kp_yaw: 0.8
@@ -63,4 +67,4 @@
     cmd_max_ay: 0.8
     cmd_max_alpha: 1.5
     _tuning_trial: 1
-    _tuning_timestamp: 2026-04-25T11:19:25.728525+02:00Z
+    _tuning_timestamp: 2026-04-25T14:39:10.009891+02:00Z

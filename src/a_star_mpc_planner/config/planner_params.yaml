@@ -13,8 +13,8 @@
     # ─────────────────────────────────────────────────────────────
     grid_reso: 0.25                # local grid cell size [m]
     grid_half_width: 10.0           # local map is 10 m x 10 m
-    grid_std: 0.15                 # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
-    obstacle_threshold: 0.16       # = 1-Φ(1σ): blocks every cell within 0.30 m of any obstacle
+    grid_std: 0.40                # Gaussian spread [m] — 1-sigma inflation radius = 0.40 m
+    obstacle_threshold: 0.16       # = 1-Φ(1σ): blocks every cell within 1σ of any obstacle
     obstacle_cost_weight: 100.0     # high penalty so any faint inflation is more expensive than a detour
     replan_rate_hz: 1.0            # lower refresh reduces path flicker while staying reactive
     goal_reached_radius: 0.30      # stop replanning near goal
@@ -119,6 +119,20 @@
     mpc_security_threshold: 0.25   # triggers at d≈0.20 m from obstacle (inside A* hard boundary)
     # BFS search radius [m]: how far to look for a free cell to escape to.
     mpc_security_escape_radius: 3.0
+
+    # ─────────────────────────────────────────────────────────────
+    # Navigation graph (topological global memory)
+    # ─────────────────────────────────────────────────────────────
+    # Nodes are added every nav_graph_node_spacing metres of travel
+    # (only in free space).  Edges connect nodes within edge_radius
+    # that have a clear line of sight through the current LiDAR grid.
+    # When the final goal is outside the local A* grid the graph
+    # publishes an intermediate waypoint so A* navigates toward a
+    # globally-informed target rather than the raw ray-to-boundary.
+    nav_graph_node_spacing:   1.5   # min distance between graph nodes [m]
+    nav_graph_edge_radius:    4.0   # max distance to attempt a new edge [m]
+    nav_graph_waypoint_reach: 1.0   # distance at which a waypoint is considered reached [m]
+    nav_graph_obs_threshold:  0.45  # occupancy probability treated as obstacle
 
     # ─────────────────────────────────────────────────────────────
     # Setpoint -> cmd_vel controller settings
