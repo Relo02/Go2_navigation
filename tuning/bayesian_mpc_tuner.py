@@ -313,8 +313,9 @@ class RosbagRecorder:
 class SimulationManager:
     """Launch / kill the Gazebo + planner stack for one scenario."""
 
-    def __init__(self):
+    def __init__(self, gui: bool = False):
         self._proc = None
+        self._gui  = gui
 
     def launch(self, params_yaml: Path, scenario: dict) -> None:
         # Resolve world path — supports both go2_sim and sim_worlds packages
@@ -336,8 +337,8 @@ class SimulationManager:
 
         cmd = _source_cmd(
             "ros2 launch robot_sim sim_a_star_mpc.launch.py"
-            f" gui:=true"
-            f" use_rviz:=true"
+            f" gui:={str(self._gui).lower()}"
+            f" use_rviz:={str(self._gui).lower()}"
             f" planner_params:={params_yaml}"
             f" wait_for_goal:=false"
             f" goal_x:={first_gx}"
@@ -877,10 +878,10 @@ def _plot_length_scales(gp_history: list, out: Path) -> None:
 
 class BayesianMPCTuner:
 
-    def __init__(self):
+    def __init__(self, gui: bool = False):
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         self._base_params  = _load_yaml(BASE_PARAMS)
-        self._sim          = SimulationManager()
+        self._sim          = SimulationManager(gui=gui)
         self._trial_num    = 0
         self._history: list[dict] = []
         self._gp_history:  list[dict] = []
@@ -1184,8 +1185,9 @@ if __name__ == "__main__":
     import argparse
 
     ap = argparse.ArgumentParser(description="Bayesian MPC tuner for Go2")
-    ap.add_argument("--trials",  type=int, default=MAX_EVALS,    help="Total trials")
-    ap.add_argument("--random",  type=int, default=N_RANDOM_INIT, help="Random init trials")
+    ap.add_argument("--trials",   type=int,  default=MAX_EVALS,    help="Total trials")
+    ap.add_argument("--random",   type=int,  default=N_RANDOM_INIT, help="Random init trials")
+    ap.add_argument("--gui",      action="store_true",             help="Launch Gazebo and RViz with GUI (default: headless)")
     args = ap.parse_args()
 
-    BayesianMPCTuner().run(max_evals=args.trials, n_random=args.random)
+    BayesianMPCTuner(gui=args.gui).run(max_evals=args.trials, n_random=args.random)
