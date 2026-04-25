@@ -60,13 +60,24 @@ PKG_SETUP    = REPO_ROOT / "install/setup.bash"
 # ─── Search space ─────────────────────────────────────────────────────────────
 
 SEARCH_SPACE = {
-    "mpc_Q_x":           hp.uniform("mpc_Q_x",            50.0,  500.0),
-    "mpc_Q_y":           hp.uniform("mpc_Q_y",            50.0,  500.0),
-    "mpc_W_obs_sigmoid": hp.uniform("mpc_W_obs_sigmoid",   50.0,  400.0),
-    "mpc_obs_r":         hp.uniform("mpc_obs_r",            0.35,   0.85),
-    "mpc_R_vx":          hp.uniform("mpc_R_vx",             0.1,    3.0),
-    "mpc_R_vy":          hp.uniform("mpc_R_vy",             0.1,    3.0),
-    "mpc_lookahead_dist":hp.uniform("mpc_lookahead_dist",   0.5,    2.5),
+    # Position tracking
+    "mpc_Q_x":              hp.uniform("mpc_Q_x",              50.0,  500.0),
+    "mpc_Q_y":              hp.uniform("mpc_Q_y",              50.0,  500.0),
+    "mpc_Q_yaw":            hp.uniform("mpc_Q_yaw",             0.01,   2.0),
+    "mpc_Q_terminal":       hp.uniform("mpc_Q_terminal",       20.0,  300.0),
+    # Control effort
+    "mpc_R_vx":             hp.uniform("mpc_R_vx",              0.1,    3.0),
+    "mpc_R_vy":             hp.uniform("mpc_R_vy",              0.1,    3.0),
+    "mpc_R_omega":          hp.uniform("mpc_R_omega",           0.1,    3.0),
+    "mpc_R_jerk":           hp.uniform("mpc_R_jerk",            0.1,    5.0),
+    # Obstacle avoidance
+    "mpc_W_obs_sigmoid":    hp.uniform("mpc_W_obs_sigmoid",    50.0,  400.0),
+    "mpc_obs_r":            hp.uniform("mpc_obs_r",             0.35,   0.85),
+    "mpc_obs_alpha":        hp.uniform("mpc_obs_alpha",         1.0,    8.0),
+    # Path following
+    "mpc_lookahead_dist":   hp.uniform("mpc_lookahead_dist",    0.5,    2.5),
+    # A* soft obstacle cost
+    "obstacle_cost_weight": hp.uniform("obstacle_cost_weight", 10.0,  500.0),
 }
 
 PARAM_NAMES  = list(SEARCH_SPACE.keys())

@@ -85,15 +85,40 @@ where $\theta \in \mathbb{R}^5$ is the parameter vector, $\Theta$ is the bounded
 
 Each parameter is drawn independently from a uniform prior. The bounds encode physical and solver-stability constraints derived from prior hand-tuning.
 
-| Parameter | Symbol | Domain | Meaning |
-|---|---|---|---|
-| `mpc_Q_xy` | $Q_{xy}$ | $[50, 500]$ | Position tracking weight in the MPC stage cost |
-| `mpc_W_obs_sigmoid` | $W_\sigma$ | $[50, 400]$ | Obstacle repulsion weight (sigmoid barrier) |
-| `mpc_obs_r` | $r_\text{obs}$ | $[0.35, 0.85]$ m | Obstacle influence radius for the sigmoid |
-| `mpc_R_vel` | $R_v$ | $[0.1, 3.0]$ | Velocity control effort weight |
-| `mpc_lookahead_dist` | $d_\text{la}$ | $[0.5, 2.5]$ m | Path-tracking lookahead distance |
+**Position tracking**
 
-The joint search space is $\Theta = \prod_{i} [\theta_i^{\min}, \theta_i^{\max}] \subset \mathbb{R}^5$.
+| Parameter | Symbol | Domain | Default | Meaning |
+|---|---|---|---|---|
+| `mpc_Q_x` | $Q_x$ | $[50, 500]$ | 150 | Forward position tracking weight |
+| `mpc_Q_y` | $Q_y$ | $[50, 500]$ | 150 | Lateral position tracking weight |
+| `mpc_Q_yaw` | $Q_\psi$ | $[0.01, 2.0]$ | 0.1 | Yaw tracking weight (kept low — A* segments are jagged) |
+| `mpc_Q_terminal` | $Q_T$ | $[20, 300]$ | 100 | Terminal state cost multiplier |
+
+**Control effort**
+
+| Parameter | Symbol | Domain | Default | Meaning |
+|---|---|---|---|---|
+| `mpc_R_vx` | $R_{v_x}$ | $[0.1, 3.0]$ | 0.5 | Forward velocity command effort |
+| `mpc_R_vy` | $R_{v_y}$ | $[0.1, 3.0]$ | 0.5 | Lateral velocity command effort |
+| `mpc_R_omega` | $R_\omega$ | $[0.1, 3.0]$ | 0.5 | Angular velocity command effort |
+| `mpc_R_jerk` | $R_j$ | $[0.1, 5.0]$ | 1.0 | Control-rate penalty (smoothness) |
+
+**Obstacle avoidance**
+
+| Parameter | Symbol | Domain | Default | Meaning |
+|---|---|---|---|---|
+| `mpc_W_obs_sigmoid` | $W_\sigma$ | $[50, 400]$ | 200 | Sigmoid barrier height |
+| `mpc_obs_r` | $r_\text{obs}$ | $[0.35, 0.85]$ m | 0.45 | Safety radius for barrier |
+| `mpc_obs_alpha` | $\alpha$ | $[1.0, 8.0]$ m⁻¹ | 4.0 | Barrier steepness (lower → better IPOPT conditioning) |
+
+**Path following**
+
+| Parameter | Symbol | Domain | Default | Meaning |
+|---|---|---|---|---|
+| `mpc_lookahead_dist` | $d_\text{la}$ | $[0.5, 2.5]$ m | 1.2 | MPC setpoint lookahead distance |
+| `obstacle_cost_weight` | $w_\text{obs}$ | $[10, 500]$ | 100 | A* soft obstacle traversal penalty |
+
+The joint search space is $\Theta = \prod_{i} [\theta_i^{\min}, \theta_i^{\max}] \subset \mathbb{R}^{13}$.
 
 ---
 
