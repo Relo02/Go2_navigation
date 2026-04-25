@@ -32,10 +32,11 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid, Path
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float32MultiArray, Header
 
 from a_star_mpc_planner.a_star_planner import AStarPlanner
 from a_star_mpc_planner.gaussian_grid_map import FixedGaussianGridMap
+from a_star_mpc_planner.persistent_map import PersistentOccupancyMap
 
 
 class AStarNode(Node):
@@ -57,6 +58,8 @@ class AStarNode(Node):
         self.declare_parameter('goal_reached_radius',   0.3)
         self.declare_parameter('max_lidar_range',       6.0)
         self.declare_parameter('planning_height',       0.0)
+        self.declare_parameter('map_decay_sec',        30.0)
+        self.declare_parameter('map_max_cells',     50_000)
 
         self._goal = np.array([
             self.get_parameter('goal_x').value,
@@ -80,6 +83,11 @@ class AStarNode(Node):
             obstacle_threshold=float(self.get_parameter('obstacle_threshold').value),
             obstacle_cost_weight=float(self.get_parameter('obstacle_cost_weight').value),
         )
+        self._persistent_map = PersistentOccupancyMap(
+            grid_reso=float(self.get_parameter('grid_reso').value),
+            decay_sec=float(self.get_parameter('map_decay_sec').value),
+            max_cells=int(self.get_parameter('map_max_cells').value),
+        )
 
         # ── State ─────────────────────────────────────────────────────
         self._pose: PoseStamped | None = None
@@ -101,10 +109,11 @@ class AStarNode(Node):
         self.create_subscription(PointCloud2, '/lidar/points_filtered',self._lidar_cb,        sensor_qos)
 
         # ── Publishers ────────────────────────────────────────────────
-        self._path_pub = self.create_publisher(Path, '/a_star/path', 10)
-        self._lgpal_pub = self.create_publisher(PoseStamped, '/a_star/local_goal', 10)
-        self._grid_pub = self.create_publisher(OccupancyGrid, '/a_star/occupancy_grid', 10)
-        self._raw_pub = self.create_publisher(Float32MultiArray, '/a_star/grid_raw', 10)
+        self._path_pub  = self.create_publisher(Path,               '/a_star/path',                10)
+        self._lgpal_pub = self.create_publisher(PoseStamped,        '/a_star/local_goal',          10)
+        self._grid_pub  = self.create_publisher(OccupancyGrid,      '/a_star/occupancy_grid',      10)
+        self._raw_pub   = self.create_publisher(Float32MultiArray,   '/a_star/grid_raw',            10)
+        self._pmap_pub  = self.create_publisher(PointCloud2,         '/a_star/persistent_obstacles', 10)
 
         # ── Replan timer ──────────────────────────────────────────────
         rate = float(self.get_parameter('replan_rate_hz').value)
@@ -145,7 +154,6 @@ class AStarNode(Node):
             points = list(point_cloud2.read_points(msg, skip_nans=True))
             if points:
                 arr = np.array([(p[0], p[1], p[2]) for p in points], dtype=float)
-                # Filter by range from robot position (not from world origin)
                 if self._pose is not None:
                     px = self._pose.pose.position.x
                     py = self._pose.pose.position.y
@@ -154,6 +162,10 @@ class AStarNode(Node):
                 self._lidar_points = arr if len(arr) > 0 else None
             else:
                 self._lidar_points = None
+
+            # Accumulate confirmed obstacle positions into the persistent map
+            now = self.get_clock().now().nanoseconds * 1e-9
+            self._persistent_map.update(self._lidar_points, now)
         except Exception as e:
             self.get_logger().warn(f'Lidar parsing error: {e}')
 
@@ -214,8 +226,21 @@ class AStarNode(Node):
         self._goal_reached = False
 
         # === ONLINE REPLANNING: Update grid centered on CURRENT robot position ===
-        # This is crucial: the grid is always re-centered on where the robot actually is
-        self._grid_map.update(self._lidar_points, drone_xy)
+        # Merge live LiDAR with persistent obstacle memory so walls that left
+        # sensor range are still represented — this prevents local minima in
+        # U-shaped corridors and around convex obstacles.
+        hw = self._grid_map.half_width
+        persistent_pts = self._persistent_map.get_points_in_window(
+            drone_xy[0] - hw, drone_xy[1] - hw,
+            drone_xy[0] + hw, drone_xy[1] + hw,
+        )
+        if persistent_pts is not None and self._lidar_points is not None:
+            merged = np.vstack([self._lidar_points, persistent_pts])
+        elif persistent_pts is not None:
+            merged = persistent_pts
+        else:
+            merged = self._lidar_points
+        self._grid_map.update(merged, drone_xy)
 
         stamp = self.get_clock().now().to_msg()
 
@@ -282,6 +307,15 @@ class AStarNode(Node):
             meta = [float(gm.minx), float(gm.miny), float(gm.reso), float(gm.cells)]
             raw_msg.data = meta + gm.gmap.flatten(order='C').astype(np.float32).tolist()
             self._raw_pub.publish(raw_msg)
+
+        # Publish all persistent obstacle cells as a PointCloud2 for RViz
+        all_cells = self._persistent_map.get_points_in_window(
+            -1e9, -1e9, 1e9, 1e9  # unbounded — publish everything stored
+        )
+        if all_cells is not None:
+            hdr = Header(stamp=stamp, frame_id='map')
+            pc = point_cloud2.create_cloud_xyz32(hdr, all_cells[:, :3].tolist())
+            self._pmap_pub.publish(pc)
 
 
 def main(args=None):

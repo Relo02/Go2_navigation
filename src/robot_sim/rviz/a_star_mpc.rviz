@@ -8,11 +8,14 @@ Panels:
         - /RobotModel1
         - /TF1
         - /LiDAR1
+        - /Persistent Obstacles1
         - /Occupancy Grid1
         - /A* Path1
         - /MPC Predicted Path1
         - /Goal Pose1
         - /MPC Setpoint1
+        - /Nav Graph1
+        - /Nav Graph Waypoint1
       Splitter Ratio: 0.5
     Tree Height: 780
   - Class: rviz_common/Selection
@@ -223,6 +226,72 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /mpc/next_setpoint
+      Value: true
+
+    # ── Persistent obstacle memory ─────────────────────────────────────────
+    - Alpha: 0.6
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 80; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Name: Persistent Obstacles
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.05
+      Style: Points
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /a_star/persistent_obstacles
+      Use Fixed Frame: true
+      Value: true
+
+    # ── Navigation graph markers (nodes / edges / active path) ─────────────
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Nav Graph
+      Namespaces:
+        nav_graph_edges: true
+        nav_graph_nodes: true
+        nav_graph_path: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /nav_graph/markers
+      Value: true
+
+    # ── Navigation graph current waypoint ──────────────────────────────────
+    - Alpha: 1
+      Axes Length: 0.4
+      Axes Radius: 0.019999999552965164
+      Class: rviz_default_plugins/Pose
+      Color: 0; 220; 255
+      Enabled: true
+      Head Length: 0.12
+      Head Radius: 0.06
+      Name: Nav Graph Waypoint
+      Shaft Length: 0.25
+      Shaft Radius: 0.025
+      Shape: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /nav_graph/waypoint
       Value: true
 
     # ── A* local goal ──────────────────────────────────────────────────────

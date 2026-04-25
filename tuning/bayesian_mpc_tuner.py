@@ -900,12 +900,14 @@ class BayesianMPCTuner:
         self._base_params  = _load_yaml(BASE_PARAMS)
         self._sim          = SimulationManager(gui=gui)
         self._trial_num    = 0
+        self._max_evals    = MAX_EVALS
         self._history: list[dict] = []
         self._gp_history:  list[dict] = []
         self._best_score   = -np.inf
         self._best_params  = None
         self._best_trial   = -1
         self._hp_trials    = Trials()
+        self._run_start_t  = None
 
     # ── Per-scenario runner ───────────────────────────────────────────────────
 
@@ -1048,8 +1050,25 @@ class BayesianMPCTuner:
         trial_dir  = RESULTS_DIR / f"trial_{trial_num:03d}"
         trial_dir.mkdir(parents=True, exist_ok=True)
 
+        # ETA: average seconds per completed trial × remaining trials
+        now = time.time()
+        if self._run_start_t is None:
+            self._run_start_t = now
+        completed = trial_num - 1
+        if completed > 0:
+            avg_sec = (now - self._run_start_t) / completed
+            eta_min = avg_sec * (self._max_evals - completed) / 60
+            eta_str = f"  ETA ~{eta_min:.0f}min"
+        else:
+            eta_str = ""
+
         print(f"\n{'='*60}", flush=True)
-        print(f"  Trial {trial_num:03d}  {datetime.now().strftime('%H:%M:%S')}", flush=True)
+        print(
+            f"  Trial {trial_num:03d}/{self._max_evals}"
+            f"  {datetime.now().strftime('%H:%M:%S')}"
+            f"{eta_str}",
+            flush=True,
+        )
         print(f"  { {k: f'{v:.3f}' for k, v in params.items()} }", flush=True)
         print(f"{'='*60}", flush=True)
 
@@ -1063,12 +1082,18 @@ class BayesianMPCTuner:
         scenario_results  = []
         aggregate_score   = 0.0
 
-        for scenario in SCENARIOS:
+        n_scenarios = len(SCENARIOS)
+        for sc_idx, scenario in enumerate(SCENARIOS, start=1):
             sc_goals = scenario.get(
                 "goals",
                 [[scenario.get("goal_x"), scenario.get("goal_y")]],
             )
-            print(f"\n  ── {scenario['name']} ({len(sc_goals)} goals, final {sc_goals[-1][0]},{sc_goals[-1][1]}) ──", flush=True)
+            print(
+                f"\n  ── Scenario {sc_idx}/{n_scenarios}: {scenario['name']}"
+                f"  ({len(sc_goals)} goals, final {sc_goals[-1][0]},{sc_goals[-1][1]})"
+                f"  weight={scenario['weight']:.2f} ──",
+                flush=True,
+            )
             result          = self._run_scenario(scenario, trial_params_path, trial_dir)
             weighted        = result.get("score", 0.0) * scenario["weight"]
             aggregate_score += weighted
@@ -1077,12 +1102,17 @@ class BayesianMPCTuner:
             obs_sc  = result.get("obs_avoidance_score", float("nan"))
             grf     = result.get("goals_reached_frac", float("nan"))
             n_goals = result.get("n_goals", len(sc_goals))
-            print(f"    goals={grf:.0%}/{n_goals}  "
-                  f"final_reached={result.get('goal_reached')}  "
-                  f"score={result.get('score', 0):.3f}  "
-                  f"dist={result.get('dist_to_goal', float('nan')):.2f}  "
-                  f"obs_avoidance={obs_sc:.3f}  "
-                  f"n_scans={result.get('n_cloud_msgs', 0)}", flush=True)
+            print(
+                f"    goals={grf:.0%}/{n_goals}  "
+                f"final_reached={result.get('goal_reached')}  "
+                f"score={result.get('score', 0):.3f}  "
+                f"weighted={weighted:.4f}  "
+                f"running_total={aggregate_score:.4f}  "
+                f"dist={result.get('dist_to_goal', float('nan')):.2f}  "
+                f"obs_avoidance={obs_sc:.3f}  "
+                f"n_scans={result.get('n_cloud_msgs', 0)}",
+                flush=True,
+            )
 
         elapsed = time.time() - t0
 
@@ -1092,7 +1122,14 @@ class BayesianMPCTuner:
             "params": {k: float(v) for k, v in params.items()},
             "score":  float(aggregate_score),
         })
+        print(f"\n  [GP] fitting surrogate on {len(self._history)} observations…", flush=True)
         gp_state = fit_gp_surrogate(self._history)
+        if "param_sensitivity" in gp_state:
+            top = sorted(gp_state["param_sensitivity"].items(), key=lambda kv: kv[1], reverse=True)[:3]
+            top_str = "  ".join(f"{k}={v:.3f}" for k, v in top)
+            print(f"  [GP] top-3 sensitivity: {top_str}", flush=True)
+        elif "skipped" in gp_state:
+            print(f"  [GP] skipped — {gp_state['skipped']}", flush=True)
         gp_state["trial"] = trial_num
         gp_state["timestamp"] = datetime.utcnow().isoformat() + "Z"
         self._gp_history.append(gp_state)
@@ -1119,7 +1156,9 @@ class BayesianMPCTuner:
         _save_json(metadata, trial_dir / "metadata.json")
 
         # 6. Track best and copy YAML
-        if aggregate_score > self._best_score:
+        prev_best = self._best_score
+        is_new_best = aggregate_score > self._best_score
+        if is_new_best:
             self._best_score  = aggregate_score
             self._best_params = {k: float(v) for k, v in params.items()}
             self._best_trial  = trial_num
@@ -1128,8 +1167,15 @@ class BayesianMPCTuner:
         # 7. Persist cumulative results + plots
         self._persist(trial_num)
 
-        print(f"\n  aggregate={aggregate_score:.4f}  best={self._best_score:.4f}"
-              f"  elapsed={elapsed/60:.1f}min", flush=True)
+        new_best_tag = f"  *** NEW BEST (+{aggregate_score - prev_best:.4f}) ***" if is_new_best else ""
+        print(
+            f"\n  [trial {trial_num:03d}/{self._max_evals}]"
+            f"  aggregate={aggregate_score:.4f}"
+            f"  best={self._best_score:.4f} (trial {self._best_trial:03d})"
+            f"  elapsed={elapsed/60:.1f}min"
+            f"{new_best_tag}",
+            flush=True,
+        )
 
         # hyperopt minimises loss
         return {"loss": -aggregate_score, "status": STATUS_OK, "score": aggregate_score}
@@ -1171,6 +1217,7 @@ class BayesianMPCTuner:
         print(f"# Results: {RESULTS_DIR}")
         print(f"{'#'*60}\n")
 
+        self._max_evals = max_evals
         try:
             fmin(
                 fn=self._objective,

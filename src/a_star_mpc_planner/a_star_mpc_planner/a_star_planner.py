@@ -302,10 +302,16 @@ class AStarPlanner:
     def _cell_cost(self, grid_map: FixedGaussianGridMap, ix: int, iy: int) -> float:
         """
         Traversal cost multiplier for cell (ix, iy).
-        1.0 = free space; higher near obstacles.
+        1.0 = open space; rises steeply as occupancy approaches the hard threshold.
+
+        Normalized quadratic: cost = 1 + w * (prob / threshold)^2
+        This makes cells near the obstacle boundary ~(w+1)x more expensive
+        while open-space cells remain cheap, strongly preferring wide corridors
+        (medial-axis behavior) over shorter paths that hug walls.
         """
         prob = float(grid_map.gmap[ix, iy])
-        return 1.0 + self.obstacle_cost_weight * prob
+        normalized = prob / self.obstacle_threshold   # 0 in open space, ~1 at boundary
+        return 1.0 + self.obstacle_cost_weight * (normalized ** 2)
 
     @staticmethod
     def _h(ix: int, iy: int, gix: int, giy: int, reso: float = 1.0) -> float:
