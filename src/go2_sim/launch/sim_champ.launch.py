@@ -35,7 +35,7 @@ from launch.actions import (
     SetEnvironmentVariable,
     AppendEnvironmentVariable,
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PythonExpression
 from launch_ros.parameter_descriptions import ParameterValue
@@ -57,6 +57,14 @@ def generate_launch_description():
     gz_resource_path = AppendEnvironmentVariable(
         name="GZ_SIM_RESOURCE_PATH",
         value=[os.path.join(go2_sim_dir, "..")]
+    )
+    # Force Mesa software rendering when running headless (no GPU available).
+    # The sensors system (LiDAR) initialises OGRE2 even with -s; without a real
+    # GPU it segfaults. llvmpipe handles it correctly on CPU.
+    libgl_software = SetEnvironmentVariable(
+        name="LIBGL_ALWAYS_SOFTWARE",
+        value="1",
+        condition=UnlessCondition(LaunchConfiguration("gui")),
     )
 
     # ── Config file paths ──────────────────────────────────────────────────
@@ -398,6 +406,7 @@ def generate_launch_description():
         # Resource path environment variables
         ign_resource_path,
         gz_resource_path,
+        libgl_software,
 
         # Arguments
         declare_use_sim_time,

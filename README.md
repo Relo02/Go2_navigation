@@ -285,7 +285,9 @@ All four nodes share a single parameter file loaded with `--params-file`.
 
 ---
 
-## Build
+## Running the Stack
+
+Build and source first:
 
 ```bash
 cd ~/Go2_navigation
@@ -293,17 +295,46 @@ colcon build
 source install/setup.bash
 ```
 
----
+### Headless mode (SSH / no GPU) in remote PC
 
-## Running the Stack
-
-All four nodes must run simultaneously. Open four terminals (all sourced with `source ~/go2/anubi/install/setup.bash`).
+Default for remote servers. Gazebo runs without a display; the sensors plugin
+uses Mesa software rendering (llvmpipe) so no GPU or `DISPLAY` is needed.
 
 ```bash
 ros2 launch robot_sim sim_a_star_mpc.launch.py
 ```
 
-For now the odometry bridge is done through Gazebo plugins, so the above command runs the full stack in simulation. In the future, the `odom_to_pose_node` will require to subscribe to the real robot's EKF output instead.
+`LIBGL_ALWAYS_SOFTWARE=1` is set automatically by the launch file when
+`gui:=false` (the default), so OGRE2 initialises on CPU without a physical GPU.
+
+### GUI mode (Gazebo + RViz, local machine or SSH with X11 forwarding)
+
+```bash
+ros2 launch robot_sim sim_a_star_mpc.launch.py gui:=true use_rviz:=true
+```
+
+## Parameter Tuning
+
+MPC cost weights and geometric thresholds can be automatically tuned using the
+Bayesian optimiser in `tuning/`. It runs the full Gazebo stack across multiple
+navigation scenarios and uses Tree-structured Parzen Estimators (TPE) to find
+the parameter set that maximises a composite navigation score.
+
+```bash
+cd tuning
+python3 bayesian_mpc_tuner.py --trials 30 --random 8          # headless
+python3 bayesian_mpc_tuner.py --trials 30 --random 8 --gui    # with Gazebo GUI
+```
+
+Results and best parameters are written to `tuning_results/`. Deploy with:
+
+```bash
+cp tuning_results/best_planner_params.yaml \
+   src/a_star_mpc_planner/config/planner_params.yaml
+```
+
+See [tuning/BAYESIAN_MPC_TUNER.md](tuning/BAYESIAN_MPC_TUNER.md) for the full
+methodology, scoring formulation, and running-mode instructions.
 
 ---
 

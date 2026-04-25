@@ -1,5 +1,76 @@
 # Bayesian MPC Tuner — Mathematical Formulation & Methodology
 
+## Running the Tuner
+
+### Headless mode (SSH / no GPU)
+
+The default and recommended mode for remote servers. Gazebo runs without a
+display; the sensors system uses Mesa software rendering (llvmpipe) so no GPU
+or `DISPLAY` variable is needed.
+
+```bash
+cd /Go2_navigation
+source install/setup.bash
+cd tuning
+python3 bayesian_mpc_tuner.py --trials 30 --random 8
+```
+
+**Requirements:** none beyond a standard Docker/ROS 2 Humble environment.  
+`LIBGL_ALWAYS_SOFTWARE=1` is set automatically by the launch file when
+`gui:=false` (the default), so the Gazebo sensors plugin (LiDAR ray-casting)
+can initialise OGRE2 on CPU without a physical GPU.
+
+---
+
+### GUI mode (Gazebo + RViz, local machine or SSH with X11 forwarding)
+
+Launches Gazebo Fortress with a rendered viewport and RViz2. Useful for
+visually inspecting a specific trial while debugging.
+
+```bash
+python3 bayesian_mpc_tuner.py --trials 30 --random 8 --gui
+```
+
+**Requirements:**
+
+- A working `DISPLAY` (local desktop, or SSH with `-X`/`-Y` forwarding):
+  ```bash
+  ssh -Y user@remote-host   # connect with trusted X11 forwarding
+  echo $DISPLAY             # should print e.g. localhost:10.0
+  xclock                    # quick sanity-check: a clock should appear locally
+  ```
+- A GPU with OpenGL 3.3+ support accessible inside the container, **or** set
+  `LIBGL_ALWAYS_SOFTWARE=1` manually for software rendering (slower but
+  works anywhere):
+  ```bash
+  export LIBGL_ALWAYS_SOFTWARE=1
+  python3 bayesian_mpc_tuner.py --trials 30 --random 8 --gui
+  ```
+
+Inside the Docker container, make sure `DISPLAY` is forwarded before running
+`./run.sh`:
+```bash
+# on the remote host, after ssh -Y
+export DISPLAY   # verify it is set
+./run.sh humble
+# inside the container:
+export DISPLAY=<value from host>   # e.g. localhost:10.0
+source /Go2_navigation/install/setup.bash
+cd /Go2_navigation/tuning
+python3 bayesian_mpc_tuner.py --trials 30 --random 8 --gui
+```
+
+---
+
+### Quick reference
+
+| Flag | Gazebo GUI | RViz | Rendering | Needs GPU / DISPLAY |
+|------|-----------|------|-----------|---------------------|
+| *(none)* | off | off | llvmpipe (CPU) | no |
+| `--gui` | on | on | hardware OpenGL | yes (or `LIBGL_ALWAYS_SOFTWARE=1`) |
+
+---
+
 ## 1. Problem Statement
 
 The MPC planner for the Go2 quadruped exposes a set of cost-function weights and geometric thresholds that strongly affect navigation performance. Manually sweeping these parameters is expensive and fails to capture the non-linear, multi-objective nature of the problem. The tuner frames parameter selection as a **black-box optimisation problem**:
