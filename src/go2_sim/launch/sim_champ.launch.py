@@ -35,7 +35,7 @@ from launch.actions import (
     SetEnvironmentVariable,
     AppendEnvironmentVariable,
 )
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, PythonExpression
 from launch_ros.parameter_descriptions import ParameterValue
@@ -58,13 +58,19 @@ def generate_launch_description():
         name="GZ_SIM_RESOURCE_PATH",
         value=[os.path.join(go2_sim_dir, "..")]
     )
-    # Force Mesa software rendering when running headless (no GPU available).
-    # The sensors system (LiDAR) initialises OGRE2 even with -s; without a real
-    # GPU it segfaults. llvmpipe handles it correctly on CPU.
+    # Force Mesa software rendering (no dedicated GPU in this environment).
+    # Required in both headless and noVNC/Xvfb GUI modes:
+    #   - LIBGL_ALWAYS_SOFTWARE=1 covers the GLX/X11 path.
+    #   - GALLIUM_DRIVER=llvmpipe is needed because EGL explicitly selects the
+    #     DRM hardware device (/dev/dri/card1) and ignores LIBGL_ALWAYS_SOFTWARE;
+    #     GALLIUM_DRIVER overrides at the Gallium level, below EGL device selection.
     libgl_software = SetEnvironmentVariable(
         name="LIBGL_ALWAYS_SOFTWARE",
         value="1",
-        condition=UnlessCondition(LaunchConfiguration("gui")),
+    )
+    gallium_software = SetEnvironmentVariable(
+        name="GALLIUM_DRIVER",
+        value="llvmpipe",
     )
 
     # ── Config file paths ──────────────────────────────────────────────────
@@ -407,6 +413,7 @@ def generate_launch_description():
         ign_resource_path,
         gz_resource_path,
         libgl_software,
+        gallium_software,
 
         # Arguments
         declare_use_sim_time,

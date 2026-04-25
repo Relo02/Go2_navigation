@@ -1,0 +1,500 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-04-25-11-19-27-073934-lorenzo-Legion-5-15IRX10-2878
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [ign gazebo-1]: process started with pid [2895]
+[INFO] [robot_state_publisher-2]: process started with pid [2897]
+[INFO] [create-3]: process started with pid [2900]
+[INFO] [parameter_bridge-4]: process started with pid [2902]
+[INFO] [velocity_limiter-5]: process started with pid [2904]
+[INFO] [quadruped_controller_node-6]: process started with pid [2906]
+[INFO] [state_estimation_node-7]: process started with pid [2909]
+[INFO] [ekf_node-8]: process started with pid [2912]
+[INFO] [static_transform_publisher-9]: process started with pid [2916]
+[INFO] [rviz2-10]: process started with pid [2918]
+[create-3] [ros_ign_gazebo] is deprecated! Redirecting to use [ros_gz_sim] instead!
+[create-3] 
+[parameter_bridge-4] [ros_ign_bridge] is deprecated! Redirecting to use [ros_gz_bridge] instead!
+[parameter_bridge-4] 
+[static_transform_publisher-9] [INFO] [1777108767.740797435] [map_to_odom_tf]: Spinning until stopped - publishing transform
+[static_transform_publisher-9] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-9] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-9] from 'map' to 'odom'
+[create-3] [INFO] [1777108767.771693670] [ros_gz_sim]: Requesting list of world names.
+[robot_state_publisher-2] [INFO] [1777108767.780219924] [robot_state_publisher]: got segment LF_FOOT
+[robot_state_publisher-2] [INFO] [1777108767.780326961] [robot_state_publisher]: got segment LH_FOOT
+[robot_state_publisher-2] [INFO] [1777108767.780338086] [robot_state_publisher]: got segment RF_FOOT
+[robot_state_publisher-2] [INFO] [1777108767.780344100] [robot_state_publisher]: got segment RH_FOOT
+[robot_state_publisher-2] [INFO] [1777108767.780349313] [robot_state_publisher]: got segment base_link
+[robot_state_publisher-2] [INFO] [1777108767.780354921] [robot_state_publisher]: got segment imu_link
+[robot_state_publisher-2] [INFO] [1777108767.780360156] [robot_state_publisher]: got segment lf_hip_link
+[robot_state_publisher-2] [INFO] [1777108767.780365571] [robot_state_publisher]: got segment lf_lower_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780371767] [robot_state_publisher]: got segment lf_upper_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780377261] [robot_state_publisher]: got segment lh_hip_link
+[robot_state_publisher-2] [INFO] [1777108767.780382607] [robot_state_publisher]: got segment lh_lower_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780388051] [robot_state_publisher]: got segment lh_upper_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780393416] [robot_state_publisher]: got segment lidar_link
+[robot_state_publisher-2] [INFO] [1777108767.780398890] [robot_state_publisher]: got segment rf_hip_link
+[robot_state_publisher-2] [INFO] [1777108767.780404384] [robot_state_publisher]: got segment rf_lower_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780409696] [robot_state_publisher]: got segment rf_upper_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780414996] [robot_state_publisher]: got segment rh_hip_link
+[robot_state_publisher-2] [INFO] [1777108767.780420273] [robot_state_publisher]: got segment rh_lower_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780425581] [robot_state_publisher]: got segment rh_upper_leg_link
+[robot_state_publisher-2] [INFO] [1777108767.780430765] [robot_state_publisher]: got segment trunk
+[quadruped_controller_node-6] [INFO] [1777108767.782793099] [rclcpp]: Successfully parsed urdf file
+[rviz2-10] QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+[state_estimation_node-7] [INFO] [1777108767.790211231] [rclcpp]: Successfully parsed urdf file
+[parameter_bridge-4] [INFO] [1777108767.797637037] [gazebo_bridge]: Creating GZ->ROS Bridge: [/clock (ignition.msgs.Clock) -> /clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.798101349] [gazebo_bridge]: Creating GZ->ROS Bridge: [/imu/data (ignition.msgs.IMU) -> /imu/data (sensor_msgs/msg/Imu)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.799255260] [gazebo_bridge]: Creating GZ->ROS Bridge: [/world/default/model/go2/joint_state (ignition.msgs.Model) -> /world/default/model/go2/joint_state (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.799528883] [gazebo_bridge]: Creating GZ->ROS Bridge: [/unilidar/cloud/points (ignition.msgs.PointCloudPacked) -> /unilidar/cloud/points (sensor_msgs/msg/PointCloud2)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.799791309] [gazebo_bridge]: Creating GZ->ROS Bridge: [/odom (ignition.msgs.Odometry) -> /odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.800311888] [gazebo_bridge]: Creating ROS->GZ Bridge: [/cmd_vel (geometry_msgs/msg/Twist) -> /cmd_vel (ignition.msgs.Twist)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.800826552] [gazebo_bridge]: Creating ROS->GZ Bridge: [/joint_group_effort_controller/joint_trajectory (trajectory_msgs/msg/JointTrajectory) -> /joint_group_effort_controller/joint_trajectory (ignition.msgs.JointTrajectory)] (Lazy 0)
+[parameter_bridge-4] [INFO] [1777108767.804861824] [gazebo_bridge]: Passing message from ROS trajectory_msgs/msg/JointTrajectory to Gazebo gz.msgs.JointTrajectory (showing msg only once per type)
+[velocity_limiter-5] [INFO] [1777108767.979811639] [velocity_limiter]: velocity_limiter: /cmd_vel → /cmd_vel_safe  watchdog=1.5s  rate=20.0Hz
+[create-3] [INFO] [1777108768.393962758] [ros_gz_sim]: Waiting messages on topic [robot_description].
+[create-3] [INFO] [1777108768.398859956] [ros_gz_sim]: Requested creation of entity.
+[create-3] [INFO] [1777108768.398899511] [ros_gz_sim]: OK creation of entity.
+[INFO] [create-3]: process has finished cleanly [pid 2900]
+[ign gazebo-1] [INFO] [1777108770.118755573] [GazeboSimROS2ControlPlugin]: robot_param_node is robot_state_publisher
+[ign gazebo-1] [INFO] [1777108770.118790095] [GazeboSimROS2ControlPlugin]: robot_param_node is robot_description
+[ign gazebo-1] [INFO] [1777108770.129518320] [gz_ros2_control]: connected to service!! robot_state_publisher asking for robot_description
+[ign gazebo-1] [INFO] [1777108770.130293520] [gz_ros2_control]: Received URDF from param server
+[ign gazebo-1] [INFO] [1777108770.138150380] [gz_ros2_control]: The position_proportional_gain has been set to: 0.1
+[ign gazebo-1] [INFO] [1777108770.138203064] [gz_ros2_control]: Loading joint: rf_hip_joint
+[ign gazebo-1] [INFO] [1777108770.138213807] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138222861] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.138231350] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.138237909] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.138244315] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.138260169] [gz_ros2_control]: Loading joint: rf_upper_leg_joint
+[ign gazebo-1] [INFO] [1777108770.138266962] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138273008] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.138279306] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.138285489] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.138291274] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.138303620] [gz_ros2_control]: Loading joint: rf_lower_leg_joint
+[ign gazebo-1] [INFO] [1777108770.138312742] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138321005] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.138330886] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.138340556] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.138349575] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.138409495] [gz_ros2_control]: Loading sensor: imu_sensor
+[ign gazebo-1] [INFO] [1777108770.138417731] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138460349] [resource_manager]: Initialize hardware 'rf' 
+[ign gazebo-1] [WARN] [1777108770.138485737] [gz_ros2_control]: The ign_ros2_control plugin got renamed to gz_ros2_control.
+[ign gazebo-1] Update the <ros2_control> tag and gazebo plugin to
+[ign gazebo-1] <hardware>
+[ign gazebo-1]   <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+[ign gazebo-1] </hardware>
+[ign gazebo-1] <gazebo>
+[ign gazebo-1]   <plugin filename="gz_ros2_control-system"name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+[ign gazebo-1]     ...
+[ign gazebo-1]   </plugin>
+[ign gazebo-1] </gazebo>
+[ign gazebo-1] [INFO] [1777108770.138539672] [resource_manager]: Successful initialization of hardware 'rf'
+[ign gazebo-1] [INFO] [1777108770.138575955] [resource_manager]: 'configure' hardware 'rf' 
+[ign gazebo-1] [INFO] [1777108770.138580153] [gz_ros2_control]: System Successfully configured!
+[ign gazebo-1] [INFO] [1777108770.138590348] [resource_manager]: Successful 'configure' of hardware 'rf'
+[ign gazebo-1] [INFO] [1777108770.138596119] [resource_manager]: 'activate' hardware 'rf' 
+[ign gazebo-1] [INFO] [1777108770.138600888] [resource_manager]: Successful 'activate' of hardware 'rf'
+[ign gazebo-1] [INFO] [1777108770.138753213] [gz_ros2_control]: The position_proportional_gain has been set to: 0.1
+[ign gazebo-1] [INFO] [1777108770.138769601] [gz_ros2_control]: Loading joint: lf_hip_joint
+[ign gazebo-1] [INFO] [1777108770.138776154] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138782398] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.138788697] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.138794483] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.138800273] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.138812652] [gz_ros2_control]: Loading joint: lf_upper_leg_joint
+[ign gazebo-1] [INFO] [1777108770.138819602] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138825286] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.138831150] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.138836871] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.138842442] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.138852817] [gz_ros2_control]: Loading joint: lf_lower_leg_joint
+[ign gazebo-1] [INFO] [1777108770.138858639] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138864188] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.138869962] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.138875438] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.138880971] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.138892320] [gz_ros2_control]: Loading sensor: imu_sensor
+[ign gazebo-1] [INFO] [1777108770.138899085] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.138906568] [resource_manager]: Initialize hardware 'lf' 
+[ign gazebo-1] [WARN] [1777108770.138915059] [gz_ros2_control]: The ign_ros2_control plugin got renamed to gz_ros2_control.
+[ign gazebo-1] Update the <ros2_control> tag and gazebo plugin to
+[ign gazebo-1] <hardware>
+[ign gazebo-1]   <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+[ign gazebo-1] </hardware>
+[ign gazebo-1] <gazebo>
+[ign gazebo-1]   <plugin filename="gz_ros2_control-system"name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+[ign gazebo-1]     ...
+[ign gazebo-1]   </plugin>
+[ign gazebo-1] </gazebo>
+[ign gazebo-1] [INFO] [1777108770.138947992] [resource_manager]: Successful initialization of hardware 'lf'
+[ign gazebo-1] [INFO] [1777108770.138960533] [resource_manager]: 'configure' hardware 'lf' 
+[ign gazebo-1] [INFO] [1777108770.138963931] [gz_ros2_control]: System Successfully configured!
+[ign gazebo-1] [INFO] [1777108770.138972375] [resource_manager]: Successful 'configure' of hardware 'lf'
+[ign gazebo-1] [INFO] [1777108770.138977750] [resource_manager]: 'activate' hardware 'lf' 
+[ign gazebo-1] [INFO] [1777108770.138982193] [resource_manager]: Successful 'activate' of hardware 'lf'
+[ign gazebo-1] [INFO] [1777108770.139056576] [gz_ros2_control]: The position_proportional_gain has been set to: 0.1
+[ign gazebo-1] [INFO] [1777108770.139069434] [gz_ros2_control]: Loading joint: rh_hip_joint
+[ign gazebo-1] [INFO] [1777108770.139075915] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139081749] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.139087662] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.139093429] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.139099223] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.139110127] [gz_ros2_control]: Loading joint: rh_upper_leg_joint
+[ign gazebo-1] [INFO] [1777108770.139116169] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139121844] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.139127672] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.139133254] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.139138805] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.139148933] [gz_ros2_control]: Loading joint: rh_lower_leg_joint
+[ign gazebo-1] [INFO] [1777108770.139154758] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139160439] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.139166098] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.139172736] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.139178592] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.139186658] [gz_ros2_control]: Loading sensor: imu_sensor
+[ign gazebo-1] [INFO] [1777108770.139192947] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139199181] [resource_manager]: Initialize hardware 'rh' 
+[ign gazebo-1] [WARN] [1777108770.139206638] [gz_ros2_control]: The ign_ros2_control plugin got renamed to gz_ros2_control.
+[ign gazebo-1] Update the <ros2_control> tag and gazebo plugin to
+[ign gazebo-1] <hardware>
+[ign gazebo-1]   <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+[ign gazebo-1] </hardware>
+[ign gazebo-1] <gazebo>
+[ign gazebo-1]   <plugin filename="gz_ros2_control-system"name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+[ign gazebo-1]     ...
+[ign gazebo-1]   </plugin>
+[ign gazebo-1] </gazebo>
+[ign gazebo-1] [INFO] [1777108770.139214846] [resource_manager]: Successful initialization of hardware 'rh'
+[ign gazebo-1] [INFO] [1777108770.139224831] [resource_manager]: 'configure' hardware 'rh' 
+[ign gazebo-1] [INFO] [1777108770.139227841] [gz_ros2_control]: System Successfully configured!
+[ign gazebo-1] [INFO] [1777108770.139235414] [resource_manager]: Successful 'configure' of hardware 'rh'
+[ign gazebo-1] [INFO] [1777108770.139240755] [resource_manager]: 'activate' hardware 'rh' 
+[ign gazebo-1] [INFO] [1777108770.139244846] [resource_manager]: Successful 'activate' of hardware 'rh'
+[ign gazebo-1] [INFO] [1777108770.139301658] [gz_ros2_control]: The position_proportional_gain has been set to: 0.1
+[ign gazebo-1] [INFO] [1777108770.139311452] [gz_ros2_control]: Loading joint: lh_hip_joint
+[ign gazebo-1] [INFO] [1777108770.139317510] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139323329] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.139329104] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.139334935] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.139340463] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.139350392] [gz_ros2_control]: Loading joint: lh_upper_leg_joint
+[ign gazebo-1] [INFO] [1777108770.139356359] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139361840] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.139367591] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.139373186] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.139378729] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.139388438] [gz_ros2_control]: Loading joint: lh_lower_leg_joint
+[ign gazebo-1] [INFO] [1777108770.139394158] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139399686] [gz_ros2_control]: 		 position
+[ign gazebo-1] [INFO] [1777108770.139413436] [gz_ros2_control]: 		 velocity
+[ign gazebo-1] [INFO] [1777108770.139419218] [gz_ros2_control]: 	Command:
+[ign gazebo-1] [INFO] [1777108770.139424912] [gz_ros2_control]: 		 effort
+[ign gazebo-1] [INFO] [1777108770.139432470] [gz_ros2_control]: Loading sensor: imu_sensor
+[ign gazebo-1] [INFO] [1777108770.139438405] [gz_ros2_control]: 	State:
+[ign gazebo-1] [INFO] [1777108770.139444434] [resource_manager]: Initialize hardware 'lh' 
+[ign gazebo-1] [WARN] [1777108770.139451535] [gz_ros2_control]: The ign_ros2_control plugin got renamed to gz_ros2_control.
+[ign gazebo-1] Update the <ros2_control> tag and gazebo plugin to
+[ign gazebo-1] <hardware>
+[ign gazebo-1]   <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+[ign gazebo-1] </hardware>
+[ign gazebo-1] <gazebo>
+[ign gazebo-1]   <plugin filename="gz_ros2_control-system"name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+[ign gazebo-1]     ...
+[ign gazebo-1]   </plugin>
+[ign gazebo-1] </gazebo>
+[ign gazebo-1] [INFO] [1777108770.139460425] [resource_manager]: Successful initialization of hardware 'lh'
+[ign gazebo-1] [INFO] [1777108770.139470366] [resource_manager]: 'configure' hardware 'lh' 
+[ign gazebo-1] [INFO] [1777108770.139473331] [gz_ros2_control]: System Successfully configured!
+[ign gazebo-1] [INFO] [1777108770.139480148] [resource_manager]: Successful 'configure' of hardware 'lh'
+[ign gazebo-1] [INFO] [1777108770.139485498] [resource_manager]: 'activate' hardware 'lh' 
+[ign gazebo-1] [INFO] [1777108770.139489439] [resource_manager]: Successful 'activate' of hardware 'lh'
+[ign gazebo-1] [INFO] [1777108770.139492813] [gz_ros2_control]: Loading controller_manager
+[ign gazebo-1] [WARN] [1777108770.175712757] [gz_ros2_control]:  Desired controller update period (0.004 s) is slower than the gazebo simulation period (0.001 s).
+[ign gazebo-1] QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '/tmp/runtime-root'
+[ign gazebo-1] libEGL warning: Not allowed to force software rendering when API explicitly selects a hardware device.
+[ign gazebo-1] libEGL warning: egl: failed to create dri2 screen
+[ign gazebo-1] libEGL warning: Not allowed to force software rendering when API explicitly selects a hardware device.
+[rviz2-10] [INFO] [1777108770.940950559] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-10] [INFO] [1777108770.941117014] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-10] [INFO] [1777108770.961441497] [rviz2]: Stereo is NOT SUPPORTED
+[ign gazebo-1] [INFO] [1777108772.182647708] [gz_ros2_control]: IMU imu_sensor has a topic name: /imu/data
+[ign gazebo-1] [INFO] [1777108772.182952067] [gz_ros2_control]: IMU imu_sensor has a topic name: /imu/data
+[ign gazebo-1] [INFO] [1777108772.183075841] [gz_ros2_control]: IMU imu_sensor has a topic name: /imu/data
+[ign gazebo-1] [INFO] [1777108772.183177253] [gz_ros2_control]: IMU imu_sensor has a topic name: /imu/data
+[ign gazebo-1] libEGL warning: Not allowed to force software rendering when API explicitly selects a hardware device.
+[ign gazebo-1] libEGL warning: egl: failed to create dri2 screen
+[ign gazebo-1] libEGL warning: Not allowed to force software rendering when API explicitly selects a hardware device.
+[INFO] [spawner-11]: process started with pid [3463]
+[ign gazebo-1] [INFO] [1777108788.056182589] [controller_manager]: Loading controller 'joint_states_controller'
+[spawner-11] [INFO] [1777108788.089394971] [spawner_joint_states_controller]: [94mLoaded [1mjoint_states_controller[0m
+[ign gazebo-1] [INFO] [1777108788.090299079] [controller_manager]: Configuring controller 'joint_states_controller'
+[ign gazebo-1] [INFO] [1777108788.090540007] [joint_states_controller]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
+[spawner-11] [INFO] [1777108788.110950412] [spawner_joint_states_controller]: [92mConfigured and activated [1mjoint_states_controller[0m
+[state_estimation_node-7] [WARN] [1777108788.481553055] []: Messages of type 0 arrived out of order (will print only once)
+[INFO] [spawner-11]: process has finished cleanly [pid 3463]
+[INFO] [spawner-12]: process started with pid [3543]
+[INFO] [odom_to_pose_node-13]: process started with pid [3545]
+[INFO] [cloud_self_filter.py-14]: process started with pid [3547]
+[INFO] [a_star_node-15]: process started with pid [3549]
+[INFO] [mpc_node-16]: process started with pid [3551]
+[INFO] [setpoint_to_cmd_vel_node-17]: process started with pid [3553]
+[ign gazebo-1] [INFO] [1777108798.066118813] [controller_manager]: Loading controller 'joint_group_effort_controller'
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108798.098525816] [setpoint_to_cmd_vel_node]: setpoint_to_cmd_vel ready: /mpc/next_setpoint + /go2/pose -> /cmd_vel
+[odom_to_pose_node-13] [INFO] [1777108798.154988777] [odom_to_pose_node]: odom_to_pose_node ready: /odom/raw → /go2/pose
+[odom_to_pose_node-13] [WARN] [1777108798.156711411] [odom_to_pose_node]: [ODOM_BRIDGE] Waiting for first /odom/raw message...
+[setpoint_to_cmd_vel_node-17] [WARN] [1777108798.338320025] [setpoint_to_cmd_vel_node]: [CMD_VEL] Waiting — pose=False setpoint=False
+[odom_to_pose_node-13] [WARN] [1777108798.341721621] [odom_to_pose_node]: [ODOM_BRIDGE] First /odom/raw received! pos=(0.000, -0.000)  vel=(0.000, -0.000)
+[odom_to_pose_node-13] [INFO] [1777108798.342369483] [odom_to_pose_node]: [ODOM_BRIDGE] #00001  pos=(0.0000, -0.0000)  vel=(0.0000, -0.0000)
+[ign gazebo-1] [WARN] [1777108798.385101148] [joint_group_effort_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[parameter_bridge-4] [INFO] [1777108798.396381244] [gazebo_bridge]: Passing message from ROS geometry_msgs/msg/Twist to Gazebo gz.msgs.Twist (showing msg only once per type)
+[spawner-12] [INFO] [1777108798.411008612] [spawner_joint_group_effort_controller]: [94mLoaded [1mjoint_group_effort_controller[0m
+[ign gazebo-1] [INFO] [1777108798.412292902] [controller_manager]: Configuring controller 'joint_group_effort_controller'
+[ign gazebo-1] [INFO] [1777108798.412818448] [joint_group_effort_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[ign gazebo-1] [WARN] [1777108798.412901649] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.413077548] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.413218868] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.413357708] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.413484749] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.413602324] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.415079717] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.415240831] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.415425217] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.415690084] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.415837302] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [WARN] [1777108798.416095488] [joint_group_effort_controller]: 'ff_velocity_scale' parameters is not defined under 'gains.<joint_name>.' structure. Maybe you are using deprecated format 'ff_velocity_scale/<joint_name>'!
+[ign gazebo-1] [INFO] [1777108798.416274942] [joint_group_effort_controller]: Command interfaces are [effort] and state interfaces are [position velocity].
+[ign gazebo-1] [INFO] [1777108798.416330713] [joint_group_effort_controller]: Using 'splines' interpolation method.
+[ign gazebo-1] [INFO] [1777108798.417737895] [joint_group_effort_controller]: Controller state will be published at 100.00 Hz.
+[ign gazebo-1] [INFO] [1777108798.421320964] [joint_group_effort_controller]: Goals with partial set of joints are allowed
+[ign gazebo-1] [INFO] [1777108798.421371503] [joint_group_effort_controller]: Action status changes will be monitored at 20.00 Hz.
+[spawner-12] [INFO] [1777108798.448258044] [spawner_joint_group_effort_controller]: [92mConfigured and activated [1mjoint_group_effort_controller[0m
+[INFO] [spawner-12]: process has finished cleanly [pid 3543]
+[a_star_node-15] [INFO] [1777108798.679724738] [a_star_node]: A* node ready | startup goal=(6.0, 0.0) | grid=20m @ 0.25m/cell
+[a_star_node-15] [INFO] [1777108798.683533768] [a_star_node]: [A*-DEBUG] Planning from pose=(0.0072, -0.0000)  goal=(6.00, 0.00)
+[a_star_node-15] [INFO] [1777108798.720199282] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.99 m  robot=(0.01,-0.00)  goal=(6.00,0.00)  path=24 wpts  local_goal=(5.76,-0.00)
+[mpc_node-16] [INFO] [1777108798.720442794] [mpc_node]: MPC node ready
+[mpc_node-16] [INFO] [1777108798.722082646] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.0062, 0.0000)  yaw=-0.0 deg  vel_body=(0.00, 0.00, 0.00)
+[mpc_node-16] [INFO] [1777108798.725251178] [mpc_node]: [MPC] Received NEW A* path: 24 raw → 45 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108798.726417709] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=0ms, lidar_pts=0)
+[rviz2-10] [INFO] [1777108798.730209053] [rviz2]: Trying to create a map of size 80 x 80 using 1 swatches
+[mpc_node-16] [INFO] [1777108799.437239142] [mpc_node]: [MPC] #0001 ok=True cost=    10.5 solve=707.9 ms avg=707.9 ms  fails=0  security=False  vx_eff=1.00  scan_age=0 ms  path_wpts=45(raw=24)  robot=[0.01,0.00] setpt=[5.76,-0.00]
+[mpc_node-16] [WARN] [1777108799.439355260] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=0ms, lidar_pts=0)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108799.474505511] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(-0.06,0.00)  setpt=(5.76,-0.00)  dist=5.82m  vx=+0.80  vy=-0.00  wz=-0.00
+[mpc_node-16] [WARN] [1777108799.528160723] [mpc_node]: [MPC-OBS] 186 pts in range | nearest 5: world=(2.67,2.64) body=(+2.72,+2.64) d=3.79m bear=+44° | world=(2.65,2.67) body=(+2.69,+2.67) d=3.79m bear=+45° | world=(2.73,2.59) body=(+2.78,+2.59) d=3.80m bear=+43° | world=(2.63,2.70) body=(+2.67,+2.70) d=3.80m bear=+45° | world=(2.76,2.57) body=(+2.81,+2.57) d=3.80m bear=+42°
+[a_star_node-15] [INFO] [1777108800.000381692] [a_star_node]: [A*] NAVIGATING  dist_to_goal=6.04 m  robot=(-0.04,-0.01)  goal=(6.00,0.00)  path=25 wpts  local_goal=(5.96,-0.01)
+[mpc_node-16] [INFO] [1777108800.029893677] [mpc_node]: [MPC] #0007 ok=True cost=    11.0 solve= 30.2 ms avg=127.0 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=47(raw=25)  robot=[-0.04,-0.01] setpt=[5.99,-0.00]
+[mpc_node-16] [INFO] [1777108800.034806406] [mpc_node]: [MPC] Received NEW A* path: 25 raw → 47 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108800.083475824] [mpc_node]: [MPC-OBS] 203 pts in range | nearest 5: world=(2.75,2.58) body=(+2.90,+2.43) d=3.78m bear=+40° | world=(2.70,2.63) body=(+2.86,+2.49) d=3.79m bear=+41° | world=(2.70,2.63) body=(+2.86,+2.49) d=3.79m bear=+41° | world=(2.62,2.72) body=(+2.78,+2.57) d=3.79m bear=+43° | world=(2.68,2.67) body=(+2.84,+2.52) d=3.79m bear=+42°
+[odom_to_pose_node-13] [INFO] [1777108800.347750885] [odom_to_pose_node]: [ODOM_BRIDGE] #00039  pos=(0.0727, -0.0057)  vel=(0.2077, -0.0840)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108800.507918498] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.09,-0.01)  setpt=(5.96,-0.01)  dist=5.87m  vx=+0.80  vy=+0.01  wz=+0.02
+[mpc_node-16] [INFO] [1777108800.583631986] [mpc_node]: [MPC] #0012 ok=True cost=    20.3 solve= 31.2 ms avg= 87.6 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=47(raw=25)  robot=[0.09,-0.01] setpt=[5.96,-0.01]
+[mpc_node-16] [WARN] [1777108800.623332262] [mpc_node]: [MPC-OBS] 177 pts in range | nearest 5: world=(2.51,2.67) body=(+2.56,+2.52) d=3.60m bear=+45° | world=(2.48,2.69) body=(+2.54,+2.55) d=3.60m bear=+45° | world=(2.56,2.63) body=(+2.62,+2.48) d=3.61m bear=+43° | world=(2.66,2.54) body=(+2.71,+2.39) d=3.61m bear=+41° | world=(2.70,2.53) body=(+2.75,+2.37) d=3.63m bear=+41°
+[mpc_node-16] [INFO] [1777108800.791826717] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.1306, 0.0009)  yaw=-1.1 deg  vel_body=(0.10, 0.01, -0.10)
+[a_star_node-15] [INFO] [1777108801.392515479] [a_star_node]: [A*-DEBUG] Planning from pose=(0.1888, -0.0080)  goal=(6.00, 0.00)
+[mpc_node-16] [WARN] [1777108801.402766097] [mpc_node]: [MPC-OBS] 223 pts in range | nearest 5: world=(2.70,2.57) body=(+2.65,+2.43) d=3.60m bear=+42° | world=(2.60,2.67) body=(+2.56,+2.54) d=3.60m bear=+45° | world=(2.60,2.67) body=(+2.56,+2.54) d=3.60m bear=+45° | world=(2.65,2.63) body=(+2.61,+2.49) d=3.60m bear=+44° | world=(2.68,2.61) body=(+2.64,+2.47) d=3.62m bear=+43°
+[a_star_node-15] [INFO] [1777108801.449810431] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.81 m  robot=(0.19,-0.01)  goal=(6.00,0.00)  path=24 wpts  local_goal=(5.94,-0.01)
+[mpc_node-16] [INFO] [1777108801.473420628] [mpc_node]: [MPC] #0017 ok=True cost=    61.1 solve= 32.5 ms avg= 71.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=101 ms  path_wpts=47(raw=25)  robot=[0.19,-0.01] setpt=[5.96,-0.01]
+[mpc_node-16] [INFO] [1777108801.552281013] [mpc_node]: [MPC] Received NEW A* path: 24 raw → 45 resampled | reset_filter=True
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108801.556455752] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.19,-0.00)  setpt=(5.96,-0.01)  dist=5.78m  vx=+0.80  vy=-0.12  wz=-0.01
+[odom_to_pose_node-13] [INFO] [1777108802.380344726] [odom_to_pose_node]: [ODOM_BRIDGE] #00062  pos=(0.1801, -0.0069)  vel=(-0.0612, -0.0306)
+[mpc_node-16] [WARN] [1777108802.394976840] [mpc_node]: [MPC-OBS] 236 pts in range | nearest 5: world=(2.35,2.82) body=(+2.08,+2.89) d=3.56m bear=+54° | world=(2.39,2.81) body=(+2.12,+2.88) d=3.58m bear=+54° | world=(2.42,2.79) body=(+2.15,+2.87) d=3.58m bear=+53° | world=(2.39,2.82) body=(+2.12,+2.89) d=3.59m bear=+54° | world=(2.45,2.78) body=(+2.18,+2.86) d=3.60m bear=+53°
+[mpc_node-16] [INFO] [1777108802.455753004] [mpc_node]: [MPC] #0020 ok=True cost=    10.9 solve= 21.3 ms avg= 64.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=101 ms  path_wpts=45(raw=24)  robot=[0.18,-0.01] setpt=[5.94,-0.01]
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108802.786370422] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.18,-0.00)  setpt=(5.94,-0.01)  dist=5.76m  vx=+0.80  vy=-0.06  wz=+0.05
+[mpc_node-16] [WARN] [1777108803.056360641] [mpc_node]: [MPC-OBS] 228 pts in range | nearest 5: world=(2.91,2.19) body=(+2.76,+2.16) d=3.51m bear=+38° | world=(2.82,2.31) body=(+2.66,+2.29) d=3.51m bear=+41° | world=(2.92,2.19) body=(+2.76,+2.17) d=3.51m bear=+38° | world=(2.82,2.32) body=(+2.67,+2.29) d=3.52m bear=+41° | world=(2.75,2.41) body=(+2.60,+2.39) d=3.53m bear=+43°
+[mpc_node-16] [INFO] [1777108803.099959696] [mpc_node]: [MPC] #0022 ok=True cost=    11.5 solve= 15.4 ms avg= 59.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=200 ms  path_wpts=45(raw=24)  robot=[0.18,-0.00] setpt=[5.94,-0.01]
+[mpc_node-16] [INFO] [1777108803.101605318] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.1821, -0.0003)  yaw=1.4 deg  vel_body=(0.08, 0.02, 0.12)
+[a_star_node-15] [INFO] [1777108803.408506485] [a_star_node]: [A*-DEBUG] Planning from pose=(0.2042, -0.0109)  goal=(6.00, 0.00)
+[a_star_node-15] [INFO] [1777108803.448925949] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.80 m  robot=(0.20,-0.01)  goal=(6.00,0.00)  path=24 wpts  local_goal=(5.95,-0.01)
+[mpc_node-16] [INFO] [1777108803.530666689] [mpc_node]: [MPC] Received NEW A* path: 24 raw → 45 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108803.533320569] [mpc_node]: [MPC] LiDAR scan stale (840 ms > 600 ms) — skipping obstacles
+[mpc_node-16] [WARN] [1777108803.534225855] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=840ms, lidar_pts=228)
+[mpc_node-16] [INFO] [1777108803.600509597] [mpc_node]: [MPC] #0025 ok=True cost=    10.2 solve= 32.9 ms avg= 55.5 ms  fails=0  security=False  vx_eff=1.00  scan_age=840 ms  path_wpts=45(raw=24)  robot=[0.20,-0.01] setpt=[5.95,-0.01]
+[mpc_node-16] [WARN] [1777108803.616824393] [mpc_node]: [MPC-OBS] 207 pts in range | nearest 5: world=(2.63,2.53) body=(+2.52,+2.46) d=3.53m bear=+44° | world=(2.63,2.53) body=(+2.53,+2.46) d=3.53m bear=+44° | world=(2.66,2.51) body=(+2.55,+2.44) d=3.54m bear=+44° | world=(2.70,2.50) body=(+2.59,+2.43) d=3.55m bear=+43° | world=(2.67,2.52) body=(+2.56,+2.45) d=3.55m bear=+44°
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108803.863281701] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.26,-0.03)  setpt=(5.95,-0.01)  dist=5.70m  vx=+0.80  vy=+0.06  wz=+0.03
+[odom_to_pose_node-13] [INFO] [1777108804.397006547] [odom_to_pose_node]: [ODOM_BRIDGE] #00099  pos=(0.2422, -0.0408)  vel=(-0.2233, 0.0054)
+[mpc_node-16] [WARN] [1777108804.407698319] [mpc_node]: [MPC-OBS] 269 pts in range | nearest 5: world=(2.44,2.63) body=(+2.27,+2.60) d=3.45m bear=+49° | world=(2.45,2.64) body=(+2.28,+2.61) d=3.47m bear=+49° | world=(2.35,2.73) body=(+2.18,+2.70) d=3.47m bear=+51° | world=(2.23,2.81) body=(+2.06,+2.79) d=3.47m bear=+54° | world=(2.23,2.81) body=(+2.06,+2.79) d=3.47m bear=+54°
+[mpc_node-16] [INFO] [1777108804.484061540] [mpc_node]: [MPC] #0030 ok=True cost=    11.1 solve= 32.5 ms avg= 50.9 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=45(raw=24)  robot=[0.25,-0.04] setpt=[5.98,-0.02]
+[mpc_node-16] [WARN] [1777108804.548108254] [mpc_node]: [MPC] LiDAR scan stale (641 ms > 600 ms) — skipping obstacles
+[mpc_node-16] [WARN] [1777108804.548755235] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=641ms, lidar_pts=269)
+[a_star_node-15] [INFO] [1777108804.569184634] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.73 m  robot=(0.27,-0.03)  goal=(6.00,0.00)  path=23 wpts  local_goal=(5.77,-0.03)
+[mpc_node-16] [INFO] [1777108804.662583353] [mpc_node]: [MPC] Received NEW A* path: 23 raw → 44 resampled | reset_filter=True
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108804.878372787] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.36,-0.03)  setpt=(5.77,-0.03)  dist=5.41m  vx=+0.80  vy=-0.01  wz=-0.01
+[mpc_node-16] [WARN] [1777108804.939726970] [mpc_node]: [MPC-OBS] 224 pts in range | nearest 5: world=(2.72,1.81) body=(+2.28,+1.92) d=2.98m bear=+40° | world=(2.94,1.50) body=(+2.52,+1.62) d=2.99m bear=+33° | world=(2.95,1.50) body=(+2.52,+1.62) d=3.00m bear=+33° | world=(2.70,1.88) body=(+2.26,+1.98) d=3.01m bear=+41° | world=(2.72,1.86) body=(+2.29,+1.97) d=3.02m bear=+41°
+[mpc_node-16] [INFO] [1777108804.990025534] [mpc_node]: [MPC] #0037 ok=True cost=    18.2 solve= 28.9 ms avg= 45.5 ms  fails=0  security=False  vx_eff=1.00  scan_age=300 ms  path_wpts=44(raw=23)  robot=[0.37,-0.03] setpt=[5.77,-0.03]
+[mpc_node-16] [INFO] [1777108805.258854452] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.4009, -0.0329)  yaw=3.1 deg  vel_body=(0.12, 0.01, 0.12)
+[mpc_node-16] [WARN] [1777108805.489392968] [mpc_node]: [MPC-OBS] 184 pts in range | nearest 5: world=(2.67,2.63) body=(+2.45,+2.49) d=3.49m bear=+45° | world=(2.72,2.59) body=(+2.50,+2.44) d=3.50m bear=+44° | world=(2.65,2.66) body=(+2.43,+2.52) d=3.50m bear=+46° | world=(2.65,2.66) body=(+2.43,+2.52) d=3.50m bear=+46° | world=(2.62,2.68) body=(+2.40,+2.54) d=3.50m bear=+47°
+[a_star_node-15] [INFO] [1777108805.513674662] [a_star_node]: [A*-DEBUG] Planning from pose=(0.4083, -0.0254)  goal=(6.00, 0.00)
+[mpc_node-16] [INFO] [1777108805.534183267] [mpc_node]: [MPC] #0040 ok=True cost=    12.4 solve= 17.7 ms avg= 43.5 ms  fails=0  security=False  vx_eff=1.00  scan_age=365 ms  path_wpts=44(raw=23)  robot=[0.41,-0.03] setpt=[5.77,-0.03]
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108806.380394954] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.40,-0.03)  setpt=(5.77,-0.03)  dist=5.36m  vx=+0.80  vy=-0.09  wz=-0.02
+[odom_to_pose_node-13] [INFO] [1777108806.397138729] [odom_to_pose_node]: [ODOM_BRIDGE] #00131  pos=(0.4135, -0.0364)  vel=(0.1081, -0.1265)
+[mpc_node-16] [WARN] [1777108806.403098727] [mpc_node]: [MPC-OBS] 216 pts in range | nearest 5: world=(2.51,2.73) body=(+2.04,+2.81) d=3.47m bear=+54° | world=(2.54,2.71) body=(+2.07,+2.79) d=3.48m bear=+53° | world=(2.46,2.77) body=(+1.99,+2.85) d=3.48m bear=+55° | world=(2.44,2.80) body=(+1.97,+2.88) d=3.49m bear=+56° | world=(2.47,2.78) body=(+2.00,+2.86) d=3.49m bear=+55°
+[mpc_node-16] [INFO] [1777108806.463090001] [mpc_node]: [MPC] #0042 ok=True cost=     9.4 solve= 26.7 ms avg= 42.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=44(raw=23)  robot=[0.41,-0.03] setpt=[5.91,-0.03]
+[mpc_node-16] [WARN] [1777108806.923155728] [mpc_node]: [MPC-OBS] 243 pts in range | nearest 5: world=(2.56,2.40) body=(+2.01,+2.52) d=3.22m bear=+51° | world=(2.62,2.36) body=(+2.07,+2.49) d=3.23m bear=+50° | world=(2.61,2.41) body=(+2.06,+2.53) d=3.26m bear=+51° | world=(2.59,2.43) body=(+2.03,+2.55) d=3.27m bear=+51° | world=(2.57,2.46) body=(+2.02,+2.58) d=3.28m bear=+52°
+[a_star_node-15] [INFO] [1777108806.945363301] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.55 m  robot=(0.45,-0.04)  goal=(6.00,0.00)  path=23 wpts  local_goal=(5.95,-0.04)
+[mpc_node-16] [INFO] [1777108806.966347350] [mpc_node]: [MPC] Received NEW A* path: 23 raw → 44 resampled | reset_filter=True
+[mpc_node-16] [INFO] [1777108807.011837113] [mpc_node]: [MPC] #0051 ok=True cost=    63.9 solve= 18.9 ms avg= 37.3 ms  fails=0  security=False  vx_eff=1.00  scan_age=261 ms  path_wpts=44(raw=23)  robot=[0.46,-0.04] setpt=[5.95,-0.04]
+[mpc_node-16] [INFO] [1777108807.355724018] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.6150, -0.1930)  yaw=-4.6 deg  vel_body=(0.31, -0.33, -0.24)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108807.389885556] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.62,-0.19)  setpt=(5.95,-0.04)  dist=5.33m  vx=+0.80  vy=-0.01  wz=+0.01
+[mpc_node-16] [WARN] [1777108807.509486507] [mpc_node]: [MPC-OBS] 222 pts in range | nearest 5: world=(2.71,2.49) body=(+2.11,+2.65) d=3.39m bear=+51° | world=(2.73,2.47) body=(+2.14,+2.63) d=3.39m bear=+51° | world=(2.84,2.41) body=(+2.25,+2.57) d=3.41m bear=+49° | world=(2.83,2.45) body=(+2.24,+2.60) d=3.43m bear=+49° | world=(2.68,2.57) body=(+2.09,+2.73) d=3.44m bear=+53°
+[mpc_node-16] [INFO] [1777108807.550944082] [mpc_node]: [MPC] #0058 ok=True cost=    17.9 solve= 18.2 ms avg= 35.3 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=44(raw=23)  robot=[0.63,-0.19] setpt=[5.95,-0.04]
+[a_star_node-15] [INFO] [1777108807.716957051] [a_star_node]: [A*-DEBUG] Planning from pose=(0.6525, -0.1846)  goal=(6.00, 0.00)
+[mpc_node-16] [WARN] [1777108808.047047254] [mpc_node]: [MPC-OBS] 182 pts in range | nearest 5: world=(2.76,2.56) body=(+2.16,+2.62) d=3.40m bear=+51° | world=(2.76,2.56) body=(+2.16,+2.63) d=3.40m bear=+51° | world=(2.70,2.60) body=(+2.11,+2.67) d=3.41m bear=+52° | world=(2.68,2.63) body=(+2.08,+2.70) d=3.41m bear=+52° | world=(2.70,2.61) body=(+2.11,+2.67) d=3.41m bear=+52°
+[mpc_node-16] [INFO] [1777108808.093840649] [mpc_node]: [MPC] #0063 ok=True cost=    15.9 solve= 26.3 ms avg= 34.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=400 ms  path_wpts=41(raw=22)  robot=[0.73,-0.17] setpt=[5.90,-0.18]
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108808.426303161] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.79,-0.15)  setpt=(5.90,-0.18)  dist=5.11m  vx=+0.80  vy=+0.06  wz=-0.01
+[odom_to_pose_node-13] [INFO] [1777108808.426605238] [odom_to_pose_node]: [ODOM_BRIDGE] #00182  pos=(0.8040, -0.1526)  vel=(0.2261, 0.0248)
+[mpc_node-16] [WARN] [1777108808.598836145] [mpc_node]: [MPC-OBS] 219 pts in range | nearest 5: world=(2.47,2.54) body=(+1.87,+2.53) d=3.15m bear=+53° | world=(2.85,2.37) body=(+2.24,+2.33) d=3.23m bear=+46° | world=(2.62,2.57) body=(+2.03,+2.54) d=3.26m bear=+51° | world=(2.57,2.61) body=(+1.99,+2.59) d=3.26m bear=+52° | world=(2.45,2.69) body=(+1.87,+2.69) d=3.27m bear=+55°
+[mpc_node-16] [INFO] [1777108808.658933260] [mpc_node]: [MPC] #0068 ok=True cost=    11.6 solve= 22.3 ms avg= 33.3 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=41(raw=22)  robot=[0.83,-0.15] setpt=[5.90,-0.18]
+[mpc_node-16] [WARN] [1777108809.308810737] [mpc_node]: [MPC-OBS] 221 pts in range | nearest 5: world=(2.67,2.60) body=(+1.92,+2.68) d=3.29m bear=+54° | world=(2.73,2.57) body=(+1.98,+2.65) d=3.30m bear=+53° | world=(2.73,2.57) body=(+1.98,+2.65) d=3.30m bear=+53° | world=(2.62,2.65) body=(+1.87,+2.73) d=3.30m bear=+56° | world=(2.68,2.62) body=(+1.93,+2.70) d=3.31m bear=+54°
+[mpc_node-16] [INFO] [1777108809.351628189] [mpc_node]: [MPC] #0069 ok=True cost=    11.1 solve= 15.6 ms avg= 33.1 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=41(raw=22)  robot=[0.85,-0.14] setpt=[5.90,-0.18]
+[a_star_node-15] [INFO] [1777108809.425636687] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.14 m  robot=(0.87,-0.14)  goal=(6.00,0.00)  path=21 wpts  local_goal=(5.87,-0.14)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108809.428614566] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.86,-0.15)  setpt=(5.90,-0.18)  dist=5.04m  vx=+0.80  vy=-0.06  wz=+0.00
+[mpc_node-16] [INFO] [1777108809.499084343] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.8710, -0.1439)  yaw=0.8 deg  vel_body=(0.08, 0.01, -0.06)
+[mpc_node-16] [INFO] [1777108809.502137296] [mpc_node]: [MPC] Received NEW A* path: 21 raw → 39 resampled | reset_filter=True
+[a_star_node-15] [INFO] [1777108810.122520644] [a_star_node]: [A*-DEBUG] Planning from pose=(0.8427, -0.1449)  goal=(6.00, 0.00)
+[mpc_node-16] [WARN] [1777108810.140442305] [mpc_node]: [MPC-OBS] 282 pts in range | nearest 5: world=(1.88,2.73) body=(+0.84,+2.94) d=3.06m bear=+74° | world=(1.99,2.71) body=(+0.95,+2.92) d=3.07m bear=+72° | world=(1.79,2.78) body=(+0.74,+2.98) d=3.07m bear=+76° | world=(1.79,2.79) body=(+0.75,+2.99) d=3.08m bear=+76° | world=(1.89,2.76) body=(+0.85,+2.97) d=3.09m bear=+74°
+[mpc_node-16] [INFO] [1777108810.214346981] [mpc_node]: [MPC] #0077 ok=True cost=    12.0 solve= 24.9 ms avg= 31.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=105 ms  path_wpts=39(raw=21)  robot=[0.84,-0.14] setpt=[5.87,-0.14]
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108810.471175948] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(0.88,-0.19)  setpt=(5.84,-0.14)  dist=4.96m  vx=+0.80  vy=-0.08  wz=+0.01
+[odom_to_pose_node-13] [INFO] [1777108810.471320357] [odom_to_pose_node]: [ODOM_BRIDGE] #00219  pos=(0.8914, -0.2033)  vel=(0.2220, -0.2845)
+[mpc_node-16] [WARN] [1777108810.770505995] [mpc_node]: [MPC-OBS] 268 pts in range | nearest 5: world=(2.69,2.58) body=(+1.53,+2.94) d=3.32m bear=+63° | world=(2.78,2.53) body=(+1.62,+2.90) d=3.33m bear=+61° | world=(2.82,2.53) body=(+1.66,+2.91) d=3.35m bear=+60° | world=(2.73,2.59) body=(+1.57,+2.96) d=3.35m bear=+62° | world=(2.68,2.63) body=(+1.51,+3.00) d=3.36m bear=+63°
+[mpc_node-16] [INFO] [1777108810.840917033] [mpc_node]: [MPC] #0082 ok=True cost=     9.6 solve= 20.4 ms avg= 31.0 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=38(raw=21)  robot=[0.90,-0.22] setpt=[5.84,-0.14]
+[a_star_node-15] [INFO] [1777108811.066079384] [a_star_node]: [A*] NAVIGATING  dist_to_goal=5.06 m  robot=(0.95,-0.20)  goal=(6.00,0.00)  path=21 wpts  local_goal=(5.95,-0.20)
+[mpc_node-16] [INFO] [1777108811.099996353] [mpc_node]: [MPC] Received NEW A* path: 21 raw → 40 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108811.364155727] [mpc_node]: [MPC-OBS] 201 pts in range | nearest 5: world=(2.89,2.40) body=(+1.76,+2.73) d=3.25m bear=+57° | world=(2.87,2.43) body=(+1.74,+2.75) d=3.26m bear=+58° | world=(2.95,2.37) body=(+1.82,+2.70) d=3.26m bear=+56° | world=(2.82,2.47) body=(+1.68,+2.79) d=3.26m bear=+59° | world=(2.85,2.45) body=(+1.71,+2.78) d=3.26m bear=+58°
+[mpc_node-16] [INFO] [1777108811.427825174] [mpc_node]: [MPC] #0086 ok=True cost=    10.8 solve= 35.0 ms avg= 30.9 ms  fails=0  security=False  vx_eff=1.00  scan_age=200 ms  path_wpts=40(raw=21)  robot=[0.96,-0.21] setpt=[5.95,-0.20]
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108811.474956840] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.01,-0.20)  setpt=(5.95,-0.20)  dist=4.93m  vx=+0.80  vy=+0.14  wz=-0.04
+[mpc_node-16] [INFO] [1777108811.517248747] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(0.9950, -0.2132)  yaw=-1.4 deg  vel_body=(0.18, -0.02, 0.12)
+[mpc_node-16] [WARN] [1777108812.002578216] [mpc_node]: [MPC-OBS] 207 pts in range | nearest 5: world=(2.77,2.58) body=(+1.74,+2.79) d=3.28m bear=+58° | world=(2.73,2.63) body=(+1.69,+2.84) d=3.31m bear=+59° | world=(2.93,2.51) body=(+1.89,+2.72) d=3.32m bear=+55° | world=(2.84,2.57) body=(+1.81,+2.78) d=3.32m bear=+57° | world=(2.90,2.54) body=(+1.87,+2.75) d=3.32m bear=+56°
+[mpc_node-16] [INFO] [1777108812.047137023] [mpc_node]: [MPC] #0091 ok=True cost=    10.1 solve= 21.4 ms avg= 30.0 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=40(raw=21)  robot=[1.02,-0.20] setpt=[5.95,-0.20]
+[a_star_node-15] [INFO] [1777108812.147011417] [a_star_node]: [A*-DEBUG] Planning from pose=(1.0632, -0.1774)  goal=(6.00, 0.00)
+[a_star_node-15] [INFO] [1777108812.168954558] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.94 m  robot=(1.06,-0.18)  goal=(6.00,0.00)  path=20 wpts  local_goal=(5.81,-0.18)
+[mpc_node-16] [INFO] [1777108812.203344161] [mpc_node]: [MPC] Received NEW A* path: 20 raw → 37 resampled | reset_filter=True
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108812.522981776] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.13,-0.13)  setpt=(5.81,-0.18)  dist=4.68m  vx=+0.80  vy=+0.09  wz=-0.05
+[odom_to_pose_node-13] [INFO] [1777108812.523588354] [odom_to_pose_node]: [ODOM_BRIDGE] #00256  pos=(1.1438, -0.1287)  vel=(0.2122, 0.0996)
+[mpc_node-16] [WARN] [1777108812.591625239] [mpc_node]: [MPC-OBS] 281 pts in range | nearest 5: world=(2.43,2.51) body=(+1.23,+2.66) d=2.93m bear=+65° | world=(2.52,2.49) body=(+1.32,+2.65) d=2.96m bear=+64° | world=(2.42,2.58) body=(+1.22,+2.73) d=2.99m bear=+66° | world=(2.45,2.57) body=(+1.25,+2.72) d=2.99m bear=+65° | world=(2.39,2.59) body=(+1.20,+2.75) d=3.00m bear=+66°
+[mpc_node-16] [INFO] [1777108812.641875144] [mpc_node]: [MPC] #0098 ok=True cost=    19.7 solve= 20.7 ms avg= 29.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=37(raw=20)  robot=[1.14,-0.13] setpt=[5.81,-0.18]
+[mpc_node-16] [WARN] [1777108813.136254619] [mpc_node]: [MPC-OBS] 210 pts in range | nearest 5: world=(2.74,2.44) body=(+1.54,+2.50) d=2.94m bear=+58° | world=(2.75,2.52) body=(+1.54,+2.59) d=3.02m bear=+59° | world=(2.80,2.50) body=(+1.60,+2.57) d=3.03m bear=+58° | world=(2.98,2.40) body=(+1.77,+2.47) d=3.04m bear=+54° | world=(2.86,2.48) body=(+1.65,+2.55) d=3.04m bear=+57°
+[mpc_node-16] [INFO] [1777108813.199313387] [mpc_node]: [MPC] #0103 ok=True cost=    13.0 solve= 24.5 ms avg= 29.2 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=37(raw=20)  robot=[1.24,-0.09] setpt=[5.81,-0.18]
+[a_star_node-15] [INFO] [1777108813.253395516] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.74 m  robot=(1.26,-0.08)  goal=(6.00,0.00)  path=19 wpts  local_goal=(5.76,-0.08)
+[mpc_node-16] [INFO] [1777108813.280441409] [mpc_node]: [MPC] Received NEW A* path: 19 raw → 37 resampled | reset_filter=True
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108813.528681633] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.30,-0.08)  setpt=(5.76,-0.08)  dist=4.46m  vx=+0.80  vy=+0.09  wz=-0.01
+[mpc_node-16] [INFO] [1777108813.540085170] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(1.2969, -0.0748)  yaw=-2.4 deg  vel_body=(0.14, 0.05, 0.06)
+[mpc_node-16] [WARN] [1777108813.690964967] [mpc_node]: [MPC-OBS] 197 pts in range | nearest 5: world=(3.42,1.09) body=(+2.18,+1.02) d=2.41m bear=+25° | world=(2.90,1.76) body=(+1.70,+1.72) d=2.42m bear=+45° | world=(3.43,1.11) body=(+2.19,+1.03) d=2.42m bear=+25° | world=(3.46,1.20) body=(+2.22,+1.12) d=2.49m bear=+27° | world=(3.13,1.67) body=(+1.93,+1.61) d=2.52m bear=+40°
+[mpc_node-16] [INFO] [1777108813.732246231] [mpc_node]: [MPC] #0108 ok=True cost=    99.5 solve= 20.5 ms avg= 28.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=37(raw=19)  robot=[1.31,-0.07] setpt=[5.76,-0.08]
+[mpc_node-16] [WARN] [1777108814.241669441] [mpc_node]: [MPC-OBS] 227 pts in range | nearest 5: world=(2.94,2.28) body=(+1.74,+2.17) d=2.78m bear=+51° | world=(2.85,2.39) body=(+1.65,+2.28) d=2.82m bear=+54° | world=(2.62,2.51) body=(+1.44,+2.43) d=2.82m bear=+59° | world=(2.62,2.52) body=(+1.44,+2.44) d=2.83m bear=+59° | world=(2.60,2.53) body=(+1.42,+2.46) d=2.83m bear=+60°
+[mpc_node-16] [INFO] [1777108814.294037387] [mpc_node]: [MPC] #0113 ok=True cost=    23.0 solve= 23.2 ms avg= 28.5 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=37(raw=19)  robot=[1.42,-0.05] setpt=[5.76,-0.08]
+[a_star_node-15] [INFO] [1777108814.343239660] [a_star_node]: [A*-DEBUG] Planning from pose=(1.4345, -0.0419)  goal=(6.00, 0.00)
+[a_star_node-15] [INFO] [1777108814.376078469] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.57 m  robot=(1.43,-0.04)  goal=(6.00,0.00)  path=19 wpts  local_goal=(5.93,-0.04)
+[mpc_node-16] [INFO] [1777108814.410627873] [mpc_node]: [MPC] Received NEW A* path: 19 raw → 37 resampled | reset_filter=True
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108814.975800141] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.46,-0.05)  setpt=(5.93,-0.04)  dist=4.48m  vx=+0.80  vy=-0.10  wz=-0.00
+[odom_to_pose_node-13] [INFO] [1777108814.978719065] [odom_to_pose_node]: [ODOM_BRIDGE] #00292  pos=(1.4652, -0.0482)  vel=(0.2161, -0.0732)
+[mpc_node-16] [WARN] [1777108815.006145595] [mpc_node]: [MPC-OBS] 221 pts in range | nearest 5: world=(2.78,2.56) body=(+1.48,+2.52) d=2.92m bear=+60° | world=(2.78,2.56) body=(+1.48,+2.52) d=2.93m bear=+60° | world=(2.76,2.58) body=(+1.46,+2.54) d=2.93m bear=+60° | world=(2.76,2.58) body=(+1.46,+2.54) d=2.93m bear=+60° | world=(2.84,2.54) body=(+1.54,+2.49) d=2.93m bear=+58°
+[mpc_node-16] [INFO] [1777108815.064603782] [mpc_node]: [MPC] #0116 ok=True cost=    22.5 solve= 21.2 ms avg= 28.3 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=37(raw=19)  robot=[1.47,-0.05] setpt=[5.93,-0.04]
+[a_star_node-15] [INFO] [1777108815.466742035] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.49 m  robot=(1.51,-0.08)  goal=(6.00,0.00)  path=18 wpts  local_goal=(5.76,-0.08)
+[mpc_node-16] [INFO] [1777108815.511722230] [mpc_node]: [MPC] Received NEW A* path: 18 raw → 33 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108815.544510830] [mpc_node]: [MPC-OBS] 237 pts in range | nearest 5: world=(0.87,2.16) body=(-1.03,+2.14) d=2.37m bear=+116° | world=(1.65,2.26) body=(-0.28,+2.36) d=2.38m bear=+97° | world=(0.88,2.19) body=(-1.03,+2.16) d=2.40m bear=+115° | world=(1.89,2.25) body=(-0.04,+2.40) d=2.40m bear=+91° | world=(1.89,2.26) body=(-0.04,+2.41) d=2.41m bear=+91°
+[mpc_node-16] [INFO] [1777108815.598897124] [mpc_node]: [MPC] #0123 ok=True cost=   157.5 solve= 30.9 ms avg= 27.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=33(raw=18)  robot=[1.52,-0.12] setpt=[5.76,-0.08]
+[mpc_node-16] [INFO] [1777108815.600055523] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(1.5277, -0.1385)  yaw=-9.4 deg  vel_body=(0.24, -0.37, -0.68)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108816.261241338] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.57,-0.17)  setpt=(5.76,-0.08)  dist=4.19m  vx=+0.80  vy=-0.06  wz=+0.00
+[mpc_node-16] [WARN] [1777108816.269194294] [mpc_node]: [MPC-OBS] 240 pts in range | nearest 5: world=(4.47,-0.02) body=(+2.86,+0.51) d=2.91m bear=+10° | world=(4.48,-0.04) body=(+2.87,+0.49) d=2.91m bear=+10° | world=(4.49,-0.17) body=(+2.90,+0.36) d=2.92m bear=+7° | world=(4.48,-0.45) body=(+2.92,+0.09) d=2.93m bear=+2° | world=(4.48,0.12) body=(+2.85,+0.65) d=2.93m bear=+13°
+[mpc_node-16] [INFO] [1777108816.314462298] [mpc_node]: [MPC] #0126 ok=True cost=    68.2 solve= 18.1 ms avg= 27.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=101 ms  path_wpts=33(raw=18)  robot=[1.57,-0.17] setpt=[5.76,-0.08]
+[a_star_node-15] [INFO] [1777108816.542807646] [a_star_node]: [A*-DEBUG] Planning from pose=(1.5972, -0.1813)  goal=(6.00, 0.00)
+[a_star_node-15] [INFO] [1777108816.566234919] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.41 m  robot=(1.60,-0.18)  goal=(6.00,0.00)  path=18 wpts  local_goal=(5.85,-0.18)
+[mpc_node-16] [INFO] [1777108816.628379468] [mpc_node]: [MPC] Received NEW A* path: 18 raw → 34 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108816.862156895] [mpc_node]: [MPC-OBS] 108 pts in range | nearest 5: world=(4.51,-0.08) body=(+2.83,+0.51) d=2.87m bear=+10° | world=(4.51,-0.05) body=(+2.82,+0.54) d=2.88m bear=+11° | world=(4.51,-0.08) body=(+2.83,+0.52) d=2.88m bear=+10° | world=(4.51,-0.27) body=(+2.86,+0.32) d=2.88m bear=+6° | world=(4.52,-0.19) body=(+2.85,+0.41) d=2.88m bear=+8°
+[mpc_node-16] [INFO] [1777108816.895730811] [mpc_node]: [MPC] #0132 ok=True cost=    61.1 solve= 17.5 ms avg= 27.6 ms  fails=0  security=False  vx_eff=1.00  scan_age=400 ms  path_wpts=34(raw=18)  robot=[1.64,-0.18] setpt=[5.85,-0.18]
+[odom_to_pose_node-13] [INFO] [1777108817.019484851] [odom_to_pose_node]: [ODOM_BRIDGE] #00338  pos=(1.6839, -0.1555)  vel=(0.2296, 0.1926)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108817.294043303] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.75,-0.12)  setpt=(5.85,-0.18)  dist=4.09m  vx=+0.80  vy=+0.29  wz=-0.01
+[mpc_node-16] [WARN] [1777108817.406274876] [mpc_node]: [MPC-OBS] 292 pts in range | nearest 5: world=(4.30,-0.19) body=(+2.53,+0.16) d=2.53m bear=+4° | world=(4.33,-0.32) body=(+2.58,+0.04) d=2.58m bear=+1° | world=(4.34,0.17) body=(+2.54,+0.52) d=2.59m bear=+12° | world=(4.39,-0.23) body=(+2.62,+0.13) d=2.63m bear=+3° | world=(4.38,-0.50) body=(+2.63,-0.14) d=2.64m bear=-3°
+[mpc_node-16] [INFO] [1777108817.466930884] [mpc_node]: [MPC] #0137 ok=True cost=   134.3 solve= 22.8 ms avg= 27.6 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=34(raw=18)  robot=[1.77,-0.11] setpt=[5.85,-0.18]
+[mpc_node-16] [INFO] [1777108817.797880810] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(1.8131, -0.0589)  yaw=-7.9 deg  vel_body=(0.29, 0.32, -0.01)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108818.380248448] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.81,-0.06)  setpt=(5.85,-0.18)  dist=4.04m  vx=+0.80  vy=+0.29  wz=-0.04
+[mpc_node-16] [WARN] [1777108818.401805628] [mpc_node]: [MPC-OBS] 303 pts in range | nearest 5: world=(4.49,-0.22) body=(+2.67,+0.21) d=2.68m bear=+4° | world=(4.50,-0.10) body=(+2.66,+0.33) d=2.68m bear=+7° | world=(4.49,0.10) body=(+2.63,+0.53) d=2.68m bear=+11° | world=(4.49,-0.22) body=(+2.68,+0.21) d=2.68m bear=+4° | world=(4.50,-0.05) body=(+2.66,+0.38) d=2.68m bear=+8°
+[a_star_node-15] [INFO] [1777108818.423351130] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.19 m  robot=(1.81,-0.06)  goal=(6.00,0.00)  path=17 wpts  local_goal=(5.81,-0.06)
+[mpc_node-16] [INFO] [1777108818.466956472] [mpc_node]: [MPC] #0139 ok=True cost=    91.6 solve= 28.9 ms avg= 27.6 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=34(raw=18)  robot=[1.81,-0.06] setpt=[5.85,-0.18]
+[mpc_node-16] [INFO] [1777108818.471441264] [mpc_node]: [MPC] Received NEW A* path: 17 raw → 34 resampled | reset_filter=True
+[a_star_node-15] [INFO] [1777108818.682975037] [a_star_node]: [A*] New global goal: (6.00, 0.00, 0.00)
+[mpc_node-16] [WARN] [1777108818.909730099] [mpc_node]: [MPC-OBS] 322 pts in range | nearest 5: world=(4.49,-0.04) body=(+2.63,+0.34) d=2.66m bear=+7° | world=(4.49,-0.11) body=(+2.64,+0.26) d=2.66m bear=+6° | world=(4.49,-0.06) body=(+2.64,+0.31) d=2.66m bear=+7° | world=(4.49,-0.04) body=(+2.64,+0.34) d=2.66m bear=+7° | world=(4.48,-0.29) body=(+2.66,+0.09) d=2.66m bear=+2°
+[odom_to_pose_node-13] [INFO] [1777108819.379215445] [odom_to_pose_node]: [ODOM_BRIDGE] #00356  pos=(1.8148, -0.0653)  vel=(-0.0168, 0.0544)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108819.398333731] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.81,-0.07)  setpt=(5.81,-0.06)  dist=4.00m  vx=+0.80  vy=+0.30  wz=-0.01
+[mpc_node-16] [WARN] [1777108819.419363574] [mpc_node]: [MPC-OBS] 285 pts in range | nearest 5: world=(4.47,0.38) body=(+2.57,+0.82) d=2.69m bear=+18° | world=(4.51,0.00) body=(+2.66,+0.45) d=2.69m bear=+10° | world=(4.50,0.13) body=(+2.63,+0.57) d=2.69m bear=+12° | world=(4.51,-0.02) body=(+2.66,+0.42) d=2.70m bear=+9° | world=(4.51,-0.18) body=(+2.68,+0.27) d=2.70m bear=+6°
+[mpc_node-16] [INFO] [1777108819.490319322] [mpc_node]: [MPC] #0143 ok=True cost=   124.5 solve= 24.5 ms avg= 27.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=101 ms  path_wpts=34(raw=17)  robot=[1.81,-0.07] setpt=[5.81,-0.06]
+[a_star_node-15] [INFO] [1777108819.537100896] [a_star_node]: [A*-DEBUG] Planning from pose=(1.8187, -0.0381)  goal=(6.00, 0.00)
+[mpc_node-16] [WARN] [1777108819.563128815] [mpc_node]: [MPC] LiDAR scan stale (605 ms > 600 ms) — skipping obstacles
+[mpc_node-16] [WARN] [1777108819.564229627] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=605ms, lidar_pts=261)
+[a_star_node-15] [INFO] [1777108819.569315564] [a_star_node]: [A*] NAVIGATING  dist_to_goal=4.18 m  robot=(1.82,-0.04)  goal=(6.00,0.00)  path=17 wpts  local_goal=(5.82,-0.04)
+[mpc_node-16] [INFO] [1777108819.670396707] [mpc_node]: [MPC] Received NEW A* path: 17 raw → 34 resampled | reset_filter=True
+[mpc_node-16] [INFO] [1777108819.886576884] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(1.8905, 0.0138)  yaw=2.1 deg  vel_body=(0.24, 0.23, 0.61)
+[mpc_node-16] [INFO] [1777108820.001140912] [mpc_node]: [MPC] #0152 ok=True cost=    10.9 solve= 20.8 ms avg= 26.8 ms  fails=0  security=False  vx_eff=1.00  scan_age=1021 ms  path_wpts=33(raw=17)  robot=[1.90,0.05] setpt=[5.89,-0.18]
+[mpc_node-16] [WARN] [1777108820.127716886] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=600ms, lidar_pts=266)
+[mpc_node-16] [WARN] [1777108820.241323482] [mpc_node]: [MPC-OBS] 309 pts in range | nearest 5: world=(3.01,2.20) body=(+1.37,+1.96) d=2.39m bear=+55° | world=(3.10,2.16) body=(+1.45,+1.91) d=2.40m bear=+53° | world=(3.11,2.17) body=(+1.46,+1.92) d=2.41m bear=+53° | world=(3.09,2.18) body=(+1.44,+1.94) d=2.41m bear=+53° | world=(3.13,2.16) body=(+1.48,+1.91) d=2.42m bear=+52°
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108820.401413118] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(1.94,0.09)  setpt=(5.89,-0.18)  dist=3.96m  vx=+0.80  vy=-0.10  wz=-0.04
+[mpc_node-16] [INFO] [1777108820.545421332] [mpc_node]: [MPC] #0157 ok=True cost=   357.3 solve= 46.2 ms avg= 26.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=200 ms  path_wpts=33(raw=17)  robot=[1.95,0.09] setpt=[5.89,-0.18]
+[mpc_node-16] [WARN] [1777108821.079627675] [mpc_node]: [MPC-OBS] 326 pts in range | nearest 5: world=(3.05,2.24) body=(+1.09,+2.15) d=2.41m bear=+63° | world=(3.15,2.19) body=(+1.20,+2.10) d=2.42m bear=+60° | world=(3.13,2.20) body=(+1.17,+2.12) d=2.42m bear=+61° | world=(3.22,2.16) body=(+1.26,+2.07) d=2.42m bear=+59° | world=(3.16,2.20) body=(+1.20,+2.11) d=2.43m bear=+60°
+[mpc_node-16] [INFO] [1777108821.134464232] [mpc_node]: [MPC] #0159 ok=True cost=    75.7 solve= 22.9 ms avg= 26.8 ms  fails=0  security=False  vx_eff=1.00  scan_age=101 ms  path_wpts=33(raw=17)  robot=[2.00,0.07] setpt=[5.89,-0.18]
+[odom_to_pose_node-13] [INFO] [1777108821.388944418] [odom_to_pose_node]: [ODOM_BRIDGE] #00405  pos=(2.0137, 0.0659)  vel=(0.0428, 0.0731)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108821.412481035] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.01,0.07)  setpt=(5.89,-0.18)  dist=3.89m  vx=+0.80  vy=-0.22  wz=-0.02
+[a_star_node-15] [INFO] [1777108821.455243600] [a_star_node]: [A*] NAVIGATING  dist_to_goal=3.99 m  robot=(2.01,0.07)  goal=(6.00,0.00)  path=16 wpts  local_goal=(5.76,-0.18)
+[mpc_node-16] [INFO] [1777108821.540673257] [mpc_node]: [MPC] Received NEW A* path: 16 raw → 31 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108821.544911921] [mpc_node]: [MPC] LiDAR scan stale (623 ms > 600 ms) — skipping obstacles
+[mpc_node-16] [WARN] [1777108821.545511258] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=623ms, lidar_pts=325)
+[mpc_node-16] [INFO] [1777108821.638561479] [mpc_node]: [MPC] #0163 ok=True cost=    11.8 solve= 13.1 ms avg= 26.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=729 ms  path_wpts=31(raw=16)  robot=[2.00,0.07] setpt=[5.76,-0.18]
+[mpc_node-16] [WARN] [1777108821.682142831] [mpc_node]: [MPC-OBS] 330 pts in range | nearest 5: world=(4.40,0.23) body=(+2.34,+0.36) d=2.37m bear=+9° | world=(4.41,-0.08) body=(+2.37,+0.05) d=2.37m bear=+1° | world=(4.40,0.30) body=(+2.33,+0.42) d=2.37m bear=+10° | world=(4.42,0.15) body=(+2.37,+0.27) d=2.38m bear=+6° | world=(4.42,0.21) body=(+2.36,+0.34) d=2.38m bear=+8°
+[mpc_node-16] [INFO] [1777108821.957477231] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(2.0829, -0.0510)  yaw=-5.3 deg  vel_body=(0.09, -0.12, -0.09)
+[a_star_node-15] [INFO] [1777108821.990708354] [a_star_node]: [A*-DEBUG] Planning from pose=(2.0952, -0.0607)  goal=(6.00, 0.00)
+[mpc_node-16] [INFO] [1777108822.198815076] [mpc_node]: [MPC] #0168 ok=True cost=   339.9 solve= 29.3 ms avg= 26.7 ms  fails=0  security=False  vx_eff=1.00  scan_age=300 ms  path_wpts=32(raw=16)  robot=[2.12,-0.07] setpt=[5.85,-0.06]
+[mpc_node-16] [WARN] [1777108822.221930292] [mpc_node]: [MPC-OBS] 176 pts in range | nearest 5: world=(4.31,-0.34) body=(+2.18,+0.23) d=2.20m bear=+6° | world=(4.36,0.06) body=(+2.14,+0.63) d=2.23m bear=+16° | world=(4.37,0.02) body=(+2.16,+0.59) d=2.24m bear=+15° | world=(4.39,-0.12) body=(+2.22,+0.46) d=2.26m bear=+12° | world=(4.38,0.15) body=(+2.14,+0.72) d=2.26m bear=+19°
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108822.429514520] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.15,-0.13)  setpt=(5.85,-0.06)  dist=3.69m  vx=+0.80  vy=-0.06  wz=-0.01
+[mpc_node-16] [INFO] [1777108822.707549682] [mpc_node]: [MPC] #0173 ok=True cost=   843.3 solve= 35.0 ms avg= 26.8 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=32(raw=16)  robot=[2.20,-0.15] setpt=[5.85,-0.06]
+[mpc_node-16] [WARN] [1777108822.755997550] [mpc_node]: [MPC-OBS] 230 pts in range | nearest 5: world=(4.31,0.28) body=(+1.86,+1.04) d=2.13m bear=+29° | world=(4.36,-0.21) body=(+2.06,+0.59) d=2.14m bear=+16° | world=(4.36,0.04) body=(+1.98,+0.83) d=2.15m bear=+23° | world=(4.38,-0.00) body=(+2.01,+0.79) d=2.16m bear=+22° | world=(4.39,-0.22) body=(+2.08,+0.58) d=2.16m bear=+16°
+[mpc_node-16] [WARN] [1777108823.395271492] [mpc_node]: [MPC-OBS] 212 pts in range | nearest 5: world=(4.49,-0.26) body=(+2.20,+0.49) d=2.26m bear=+13° | world=(4.50,-0.26) body=(+2.21,+0.49) d=2.26m bear=+13° | world=(4.50,-0.07) body=(+2.16,+0.68) d=2.27m bear=+17° | world=(4.50,-0.28) body=(+2.22,+0.47) d=2.27m bear=+12° | world=(4.50,-0.09) body=(+2.17,+0.66) d=2.27m bear=+17°
+[odom_to_pose_node-13] [INFO] [1777108823.397053047] [odom_to_pose_node]: [ODOM_BRIDGE] #00444  pos=(2.2532, -0.1636)  vel=(0.1903, 0.0967)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108823.434209514] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.27,-0.16)  setpt=(5.85,-0.06)  dist=3.58m  vx=+0.80  vy=+0.11  wz=+0.01
+[a_star_node-15] [INFO] [1777108823.465883950] [a_star_node]: [A*] NAVIGATING  dist_to_goal=3.73 m  robot=(2.27,-0.16)  goal=(6.00,0.00)  path=15 wpts  local_goal=(5.77,-0.16)
+[mpc_node-16] [INFO] [1777108823.467998892] [mpc_node]: [MPC] #0175 ok=True cost=   517.7 solve= 41.0 ms avg= 26.9 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=32(raw=16)  robot=[2.24,-0.17] setpt=[5.85,-0.06]
+[mpc_node-16] [INFO] [1777108823.550675289] [mpc_node]: [MPC] Received NEW A* path: 15 raw → 29 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108823.640571942] [mpc_node]: [MPC] LiDAR scan stale (605 ms > 600 ms) — skipping obstacles
+[mpc_node-16] [WARN] [1777108823.642482565] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=605ms, lidar_pts=238)
+[mpc_node-16] [WARN] [1777108823.995741618] [mpc_node]: [MPC-OBS] 221 pts in range | nearest 5: world=(4.26,0.00) body=(+1.88,+0.70) d=2.00m bear=+20° | world=(4.30,-0.08) body=(+1.94,+0.63) d=2.04m bear=+18° | world=(4.33,-0.21) body=(+2.00,+0.51) d=2.07m bear=+14° | world=(4.33,-0.01) body=(+1.95,+0.70) d=2.07m bear=+20° | world=(4.34,-0.09) body=(+1.98,+0.63) d=2.08m bear=+18°
+[mpc_node-16] [INFO] [1777108824.048740571] [mpc_node]: [MPC] #0180 ok=True cost=  1037.7 solve= 29.3 ms avg= 26.9 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=29(raw=15)  robot=[2.26,-0.11] setpt=[5.77,-0.16]
+[mpc_node-16] [INFO] [1777108824.050431528] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(2.2679, -0.1017)  yaw=-14.2 deg  vel_body=(0.04, 0.15, 0.46)
+[a_star_node-15] [INFO] [1777108824.331050368] [a_star_node]: [A*-DEBUG] Planning from pose=(2.3223, -0.1082)  goal=(6.00, 0.00)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108824.465325107] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.35,-0.10)  setpt=(5.77,-0.16)  dist=3.42m  vx=+0.80  vy=+0.30  wz=-0.02
+[mpc_node-16] [WARN] [1777108824.554628392] [mpc_node]: [MPC-OBS] 293 pts in range | nearest 5: world=(3.84,-0.30) body=(+1.53,+0.20) d=1.54m bear=+7° | world=(3.85,-0.18) body=(+1.51,+0.31) d=1.54m bear=+12° | world=(3.88,-0.14) body=(+1.52,+0.37) d=1.57m bear=+14° | world=(3.87,-0.22) body=(+1.54,+0.29) d=1.57m bear=+10° | world=(3.87,-0.29) body=(+1.55,+0.21) d=1.57m bear=+8°
+[mpc_node-16] [INFO] [1777108824.639040228] [mpc_node]: [MPC] #0184 ok=True cost=  3605.4 solve= 47.2 ms avg= 27.2 ms  fails=0  security=False  vx_eff=1.00  scan_age=312 ms  path_wpts=30(raw=15)  robot=[2.31,-0.10] setpt=[5.82,-0.11]
+[mpc_node-16] [WARN] [1777108825.074476628] [mpc_node]: [MPC-OBS] 272 pts in range | nearest 5: world=(4.47,0.08) body=(+1.93,+0.49) d=2.00m bear=+14° | world=(4.46,0.19) body=(+1.91,+0.60) d=2.00m bear=+17° | world=(4.47,0.08) body=(+1.94,+0.49) d=2.00m bear=+14° | world=(4.47,0.15) body=(+1.92,+0.56) d=2.00m bear=+16° | world=(4.48,0.04) body=(+1.95,+0.46) d=2.00m bear=+13°
+[mpc_node-16] [INFO] [1777108825.145554616] [mpc_node]: [MPC] #0189 ok=True cost=   574.5 solve= 41.3 ms avg= 27.2 ms  fails=0  security=False  vx_eff=1.00  scan_age=205 ms  path_wpts=30(raw=15)  robot=[2.47,0.00] setpt=[5.82,-0.11]
+[a_star_node-15] [INFO] [1777108825.324236426] [a_star_node]: [A*] NAVIGATING  dist_to_goal=3.46 m  robot=(2.55,0.07)  goal=(6.00,0.00)  path=14 wpts  local_goal=(5.80,-0.18)
+[mpc_node-16] [INFO] [1777108825.365115612] [mpc_node]: [MPC] Received NEW A* path: 14 raw → 28 resampled | reset_filter=True
+[odom_to_pose_node-13] [INFO] [1777108825.441910420] [odom_to_pose_node]: [ODOM_BRIDGE] #00490  pos=(2.5874, 0.1092)  vel=(0.1764, 0.1228)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108825.499943039] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.59,0.11)  setpt=(5.80,-0.18)  dist=3.22m  vx=+0.80  vy=+0.30  wz=+0.00
+[mpc_node-16] [WARN] [1777108825.618133689] [mpc_node]: [MPC-OBS] 280 pts in range | nearest 5: world=(4.49,0.03) body=(+1.87,+0.23) d=1.88m bear=+7° | world=(4.50,0.24) body=(+1.83,+0.44) d=1.89m bear=+13° | world=(4.50,0.17) body=(+1.85,+0.37) d=1.89m bear=+11° | world=(4.50,0.09) body=(+1.87,+0.28) d=1.89m bear=+9° | world=(4.50,0.19) body=(+1.85,+0.39) d=1.89m bear=+12°
+[mpc_node-16] [INFO] [1777108825.683208699] [mpc_node]: [MPC] #0194 ok=True cost=  1086.2 solve= 35.6 ms avg= 27.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=300 ms  path_wpts=28(raw=14)  robot=[2.62,0.12] setpt=[5.80,-0.18]
+[mpc_node-16] [INFO] [1777108826.058292241] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(2.7024, 0.2072)  yaw=-7.7 deg  vel_body=(0.11, 0.11, -0.02)
+[mpc_node-16] [INFO] [1777108826.200144890] [mpc_node]: [MPC] #0198 ok=True cost=  1499.3 solve= 35.7 ms avg= 27.4 ms  fails=0  security=False  vx_eff=1.00  scan_age=120 ms  path_wpts=28(raw=14)  robot=[2.70,0.21] setpt=[5.80,-0.18]
+[mpc_node-16] [WARN] [1777108826.236276492] [mpc_node]: [MPC-OBS] 520 pts in range | nearest 5: world=(4.49,0.18) body=(+1.77,+0.20) d=1.78m bear=+6° | world=(4.50,0.15) body=(+1.78,+0.17) d=1.79m bear=+5° | world=(4.50,0.26) body=(+1.77,+0.28) d=1.79m bear=+9° | world=(4.50,0.30) body=(+1.76,+0.32) d=1.79m bear=+10° | world=(4.50,0.15) body=(+1.78,+0.17) d=1.79m bear=+5°
+[a_star_node-15] [INFO] [1777108826.347646219] [a_star_node]: [A*-DEBUG] Planning from pose=(2.7784, 0.2623)  goal=(6.00, 0.00)
+[a_star_node-15] [INFO] [1777108826.396529585] [a_star_node]: [A*] NAVIGATING  dist_to_goal=3.23 m  robot=(2.78,0.26)  goal=(6.00,0.00)  path=13 wpts  local_goal=(5.78,-0.24)
+[mpc_node-16] [INFO] [1777108826.531918232] [mpc_node]: [MPC] Received NEW A* path: 13 raw → 27 resampled | reset_filter=True
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108827.397426924] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.81,0.28)  setpt=(5.78,-0.24)  dist=3.01m  vx=+0.80  vy=+0.06  wz=-0.06
+[odom_to_pose_node-13] [INFO] [1777108827.449672603] [odom_to_pose_node]: [ODOM_BRIDGE] #00513  pos=(2.8299, 0.2777)  vel=(-0.0778, -0.0651)
+[mpc_node-16] [WARN] [1777108827.459996859] [mpc_node]: [MPC-OBS] 551 pts in range | nearest 5: world=(4.47,0.13) body=(+1.65,-0.04) d=1.65m bear=-1° | world=(4.49,0.32) body=(+1.66,+0.16) d=1.67m bear=+6° | world=(4.49,0.32) body=(+1.66,+0.16) d=1.67m bear=+6° | world=(4.50,0.27) body=(+1.67,+0.11) d=1.67m bear=+4° | world=(4.50,0.24) body=(+1.67,+0.08) d=1.68m bear=+3°
+[mpc_node-16] [INFO] [1777108827.582052238] [mpc_node]: [MPC] #0203 ok=True cost=  2336.5 solve= 49.9 ms avg= 27.6 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=27(raw=13)  robot=[2.82,0.28] setpt=[5.78,-0.24]
+[mpc_node-16] [WARN] [1777108827.583803431] [mpc_node]: [MPC] LiDAR scan stale (821 ms > 600 ms) — skipping obstacles
+[mpc_node-16] [WARN] [1777108827.584539934] [mpc_node]: [MPC-OBS] NO obstacles fed to MPC this cycle (stale=821ms, lidar_pts=551)
+[a_star_node-15] [INFO] [1777108827.653607193] [a_star_node]: [A*] NAVIGATING  dist_to_goal=3.21 m  robot=(2.81,0.30)  goal=(6.00,0.00)  path=13 wpts  local_goal=(5.81,-0.20)
+[mpc_node-16] [INFO] [1777108827.743488625] [mpc_node]: [MPC] Received NEW A* path: 13 raw → 27 resampled | reset_filter=True
+[mpc_node-16] [WARN] [1777108828.077953913] [mpc_node]: [MPC-OBS] 646 pts in range | nearest 5: world=(4.20,0.11) body=(+1.39,-0.21) d=1.40m bear=-9° | world=(4.21,0.13) body=(+1.39,-0.18) d=1.40m bear=-8° | world=(4.21,0.18) body=(+1.40,-0.14) d=1.40m bear=-6° | world=(4.22,0.28) body=(+1.41,-0.03) d=1.41m bear=-1° | world=(4.22,0.26) body=(+1.41,-0.06) d=1.41m bear=-2°
+[mpc_node-16] [INFO] [1777108828.221734817] [mpc_node]: [MPC] #0209 ok=True cost=  4597.0 solve= 55.6 ms avg= 27.9 ms  fails=0  security=False  vx_eff=1.00  scan_age=302 ms  path_wpts=27(raw=13)  robot=[2.81,0.28] setpt=[5.81,-0.20]
+[mpc_node-16] [INFO] [1777108828.223078999] [mpc_node]: [MPC-DEBUG] /go2/pose received: pos=(2.8070, 0.2739)  yaw=1.7 deg  vel_body=(0.01, -0.03, 0.11)
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108828.400831652] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.92,0.14)  setpt=(5.81,-0.20)  dist=2.91m  vx=+0.80  vy=-0.26  wz=+0.06
+[a_star_node-15] [INFO] [1777108828.561940847] [a_star_node]: [A*-DEBUG] Planning from pose=(2.9129, 0.1297)  goal=(6.00, 0.00)
+[mpc_node-16] [WARN] [1777108828.650221312] [mpc_node]: [MPC-OBS] 657 pts in range | nearest 5: world=(4.47,0.19) body=(+1.54,+0.19) d=1.55m bear=+7° | world=(4.46,0.28) body=(+1.53,+0.29) d=1.55m bear=+11° | world=(4.47,0.08) body=(+1.55,+0.09) d=1.56m bear=+3° | world=(4.47,0.12) body=(+1.55,+0.13) d=1.56m bear=+5° | world=(4.47,0.06) body=(+1.56,+0.06) d=1.56m bear=+2°
+[mpc_node-16] [INFO] [1777108828.730576156] [mpc_node]: [MPC] #0213 ok=True cost=  2766.0 solve= 28.1 ms avg= 28.0 ms  fails=0  security=False  vx_eff=1.00  scan_age=248 ms  path_wpts=27(raw=13)  robot=[2.92,0.14] setpt=[5.81,-0.20]
+[mpc_node-16] [WARN] [1777108829.352835313] [mpc_node]: [MPC-OBS] 543 pts in range | nearest 5: world=(4.51,0.12) body=(+1.59,-0.01) d=1.59m bear=-0° | world=(4.48,0.43) body=(+1.56,+0.31) d=1.59m bear=+11° | world=(4.51,0.00) body=(+1.59,-0.12) d=1.60m bear=-4° | world=(4.52,0.19) body=(+1.60,+0.07) d=1.60m bear=+2° | world=(4.51,0.29) body=(+1.59,+0.17) d=1.60m bear=+6°
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108829.408559831] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.94,0.07)  setpt=(5.91,-0.12)  dist=2.98m  vx=+0.80  vy=-0.27  wz=+0.06
+[odom_to_pose_node-13] [INFO] [1777108829.458017178] [odom_to_pose_node]: [ODOM_BRIDGE] #00556  pos=(2.9541, 0.0559)  vel=(-0.0037, 0.0402)
+[mpc_node-16] [INFO] [1777108829.472910344] [mpc_node]: [MPC] #0215 ok=True cost=  3168.6 solve= 55.4 ms avg= 28.1 ms  fails=0  security=False  vx_eff=1.00  scan_age=100 ms  path_wpts=26(raw=13)  robot=[2.92,0.10] setpt=[5.91,-0.12]
+[setpoint_to_cmd_vel_node-17] [INFO] [1777108830.426904536] [setpoint_to_cmd_vel_node]: [CMD_VEL] robot=(2.95,0.06)  setpt=(5.91,-0.12)  dist=2.97m  vx=+0.80  vy=-0.20  wz=+0.07
