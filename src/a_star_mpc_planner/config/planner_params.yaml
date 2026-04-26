@@ -13,7 +13,7 @@
     # ─────────────────────────────────────────────────────────────
     grid_reso: 0.25                # local grid cell size [m]
     grid_half_width: 10.0           # local map is 10 m x 10 m
-    grid_std: 0.40              # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
+    grid_std: 0.15              # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
     obstacle_threshold: 0.4       # = 1-Φ(1σ): blocks every cell within 1σ of any obstacle
     obstacle_cost_weight: 35.0      # normalized-quadratic weight — prefers wide paths without blocking doorways
     replan_rate_hz: 1.0            # lower refresh reduces path flicker while staying reactive
@@ -127,7 +127,7 @@
     # merged into the Gaussian grid every planning cycle, so walls
     # that left sensor range remain visible to A*.
     # Set map_decay_sec: 0.0 to keep all obstacles forever (static env).
-    map_decay_sec:  30.0   # seconds before an unconfirmed cell expires
+    map_decay_sec:  15.0   # seconds before an unconfirmed cell expires
     map_max_cells:  50000  # memory cap — oldest cells dropped when exceeded
 
     # ─────────────────────────────────────────────────────────────

@@ -13,9 +13,9 @@
     # ─────────────────────────────────────────────────────────────
     grid_reso: 0.25                # local grid cell size [m]
     grid_half_width: 10.0           # local map is 10 m x 10 m
-    grid_std: 0.15                 # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
-    obstacle_threshold: 0.16       # = 1-Φ(1σ): blocks every cell within 0.30 m of any obstacle
-    obstacle_cost_weight: 100.0     # high penalty so any faint inflation is more expensive than a detour
+    grid_std: 0.30              # Gaussian spread [m] — 1-sigma inflation radius = 0.30 m
+    obstacle_threshold: 0.4       # = 1-Φ(1σ): blocks every cell within 1σ of any obstacle
+    obstacle_cost_weight: 35.0      # normalized-quadratic weight — prefers wide paths without blocking doorways
     replan_rate_hz: 1.0            # lower refresh reduces path flicker while staying reactive
     goal_reached_radius: 0.30      # stop replanning near goal
     planning_height: 0.0
@@ -23,8 +23,8 @@
     # ─────────────────────────────────────────────────────────────
     # MPC horizon parameters
     # ─────────────────────────────────────────────────────────────
-    mpc_N: 15                    # prediction horizon steps
-    mpc_dt: 0.10                 # time step [s] — 15×0.1=1.5s horizon
+    mpc_N: 50                    # prediction horizon steps
+    mpc_dt: 0.1                 # time step [s] — 50×0.05=2.5s horizon
 
     # ─────────────────────────────────────────────────────────────
     # Actuator lag model (fixes #3 holonomic mismatch + #4 lag)
@@ -45,16 +45,16 @@
     # ─────────────────────────────────────────────────────────────
     # Tracking cost weights
     # ─────────────────────────────────────────────────────────────
-    mpc_Q_x: 150.0                  # x-axis (forward) position tracking weight
-    mpc_Q_y: 150.0                  # y-axis (lateral) position tracking weight
-    mpc_Q_yaw: 0.1                  # yaw tracking weight (low — A* segments are jagged)
+    mpc_Q_x: 300.0                  # x-axis (forward) position tracking weight
+    mpc_Q_y: 300.0                  # y-axis (lateral) position tracking weight — tuned separately
+    mpc_Q_yaw: 10.0                  # yaw tracking weight (low — A* segments are jagged)
     mpc_Q_terminal: 100.0          # terminal state weight multiplier
 
     # ─────────────────────────────────────────────────────────────
     # Control effort weights
     # ─────────────────────────────────────────────────────────────
     mpc_R_vx: 0.5                  # forward velocity command effort
-    mpc_R_vy: 0.5                  # lateral velocity command effort
+    mpc_R_vy: 0.5                  # lateral velocity command effort — tuned separately
     mpc_R_omega: 0.5               # angular velocity control effort
     mpc_R_jerk: 1.0                # stronger penalty on control-rate change for smoother motion
 
@@ -119,6 +119,30 @@
     mpc_security_threshold: 0.25   # triggers at d≈0.20 m from obstacle (inside A* hard boundary)
     # BFS search radius [m]: how far to look for a free cell to escape to.
     mpc_security_escape_radius: 3.0
+
+    # ─────────────────────────────────────────────────────────────
+    # Persistent obstacle map (local minima avoidance)
+    # ─────────────────────────────────────────────────────────────
+    # LiDAR hits are accumulated in a sparse world-frame map and
+    # merged into the Gaussian grid every planning cycle, so walls
+    # that left sensor range remain visible to A*.
+    # Set map_decay_sec: 0.0 to keep all obstacles forever (static env).
+    map_decay_sec:  30.0   # seconds before an unconfirmed cell expires
+    map_max_cells:  50000  # memory cap — oldest cells dropped when exceeded
+
+    # ─────────────────────────────────────────────────────────────
+    # Navigation graph (topological global memory)
+    # ─────────────────────────────────────────────────────────────
+    # Nodes are added every nav_graph_node_spacing metres of travel
+    # (only in free space).  Edges connect nodes within edge_radius
+    # that have a clear line of sight through the current LiDAR grid.
+    # When the final goal is outside the local A* grid the graph
+    # publishes an intermediate waypoint so A* navigates toward a
+    # globally-informed target rather than the raw ray-to-boundary.
+    nav_graph_node_spacing:   1.5   # min distance between graph nodes [m]
+    nav_graph_edge_radius:    4.0   # max distance to attempt a new edge [m]
+    nav_graph_waypoint_reach: 1.0   # distance at which a waypoint is considered reached [m]
+    nav_graph_obs_threshold:  0.45  # occupancy probability treated as obstacle
 
     # ─────────────────────────────────────────────────────────────
     # Setpoint -> cmd_vel controller settings

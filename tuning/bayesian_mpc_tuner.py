@@ -33,9 +33,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 
@@ -53,7 +50,7 @@ from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 
 REPO_ROOT    = Path(__file__).parent.parent.resolve()
 BASE_PARAMS  = REPO_ROOT / "src/a_star_mpc_planner/config/planner_params.yaml"
-RESULTS_DIR  = REPO_ROOT / "tuning_results"
+RESULTS_DIR  = Path("/media/lorenzo/writable/tuning_results")
 ROS_SETUP    = "/opt/ros/humble/setup.bash"
 PKG_SETUP    = REPO_ROOT / "install/setup.bash"
 
@@ -63,21 +60,16 @@ SEARCH_SPACE = {
     # Position tracking
     "mpc_Q_x":              hp.uniform("mpc_Q_x",              50.0,  500.0),
     "mpc_Q_y":              hp.uniform("mpc_Q_y",              50.0,  500.0),
-    "mpc_Q_yaw":            hp.uniform("mpc_Q_yaw",             0.01,   2.0),
+    "mpc_Q_yaw":            hp.uniform("mpc_Q_yaw",             0.1,   15.0),
     "mpc_Q_terminal":       hp.uniform("mpc_Q_terminal",       20.0,  300.0),
-    # Control effort
-    "mpc_R_vx":             hp.uniform("mpc_R_vx",              0.1,    3.0),
-    "mpc_R_vy":             hp.uniform("mpc_R_vy",              0.1,    3.0),
-    "mpc_R_omega":          hp.uniform("mpc_R_omega",           0.1,    3.0),
-    "mpc_R_jerk":           hp.uniform("mpc_R_jerk",            0.1,    5.0),
     # Obstacle avoidance
     "mpc_W_obs_sigmoid":    hp.uniform("mpc_W_obs_sigmoid",    50.0,  400.0),
-    "mpc_obs_r":            hp.uniform("mpc_obs_r",             0.35,   0.85),
-    "mpc_obs_alpha":        hp.uniform("mpc_obs_alpha",         1.0,    8.0),
+    # "mpc_obs_r":            hp.uniform("mpc_obs_r",             0.35,   0.85),
+    # "mpc_obs_alpha":        hp.uniform("mpc_obs_alpha",         1.0,    8.0),
     # Path following
-    "mpc_lookahead_dist":   hp.uniform("mpc_lookahead_dist",    0.5,    2.5),
+    # "mpc_lookahead_dist":   hp.uniform("mpc_lookahead_dist",    0.5,    2.5),
     # A* soft obstacle cost
-    "obstacle_cost_weight": hp.uniform("obstacle_cost_weight", 10.0,  500.0),
+    "grid_std":            hp.uniform("grid_std",            0.1,    0.5),
 }
 
 PARAM_NAMES  = list(SEARCH_SPACE.keys())
@@ -847,7 +839,22 @@ def serialize_tpe_state(trials: Trials, trial_num: int) -> dict:
 
 # ─── Plots ────────────────────────────────────────────────────────────────────
 
+def _get_plt():
+    """Lazy matplotlib import — keeps the tuner runnable when system mpl is broken."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        return plt
+    except Exception as e:
+        print(f"  [plot] matplotlib unavailable ({e}) — skipping plot", flush=True)
+        return None
+
+
 def _plot_convergence(results: list, out: Path) -> None:
+    plt = _get_plt()
+    if plt is None:
+        return
     scores      = [r["score"] for r in results]
     best_so_far = [max(scores[:i+1]) for i in range(len(scores))]
 
@@ -862,6 +869,9 @@ def _plot_convergence(results: list, out: Path) -> None:
 def _plot_param_importance(gp_history: list, out: Path) -> None:
     valid = [s for s in gp_history if "param_sensitivity" in s]
     if not valid:
+        return
+    plt = _get_plt()
+    if plt is None:
         return
     trials = [s["trial"] for s in valid]
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -878,6 +888,9 @@ def _plot_param_importance(gp_history: list, out: Path) -> None:
 def _plot_length_scales(gp_history: list, out: Path) -> None:
     valid = [s for s in gp_history if "length_scales" in s]
     if not valid:
+        return
+    plt = _get_plt()
+    if plt is None:
         return
     trials = [s["trial"] for s in valid]
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -1062,9 +1075,12 @@ class BayesianMPCTuner:
         else:
             eta_str = ""
 
+        n_random  = getattr(self, "_n_random", N_RANDOM_INIT)
+        mode_tag  = "RANDOM INIT" if trial_num <= n_random else "TPE-GUIDED"
         print(f"\n{'='*60}", flush=True)
         print(
             f"  Trial {trial_num:03d}/{self._max_evals}"
+            f"  [{mode_tag}]"
             f"  {datetime.now().strftime('%H:%M:%S')}"
             f"{eta_str}",
             flush=True,
@@ -1122,14 +1138,27 @@ class BayesianMPCTuner:
             "params": {k: float(v) for k, v in params.items()},
             "score":  float(aggregate_score),
         })
-        print(f"\n  [GP] fitting surrogate on {len(self._history)} observations…", flush=True)
+        print(f"\n  {'─'*56}", flush=True)
+        print(f"  [GP] fitting surrogate on {len(self._history)} observations…", flush=True)
         gp_state = fit_gp_surrogate(self._history)
         if "param_sensitivity" in gp_state:
-            top = sorted(gp_state["param_sensitivity"].items(), key=lambda kv: kv[1], reverse=True)[:3]
+            top = sorted(gp_state["param_sensitivity"].items(), key=lambda kv: kv[1], reverse=True)[:5]
             top_str = "  ".join(f"{k}={v:.3f}" for k, v in top)
-            print(f"  [GP] top-3 sensitivity: {top_str}", flush=True)
+            print(f"  [GP] ✓ active  —  noise={gp_state.get('noise_level', float('nan')):.4f}"
+                  f"  gp_mean_at_best={gp_state.get('gp_mean_at_best', float('nan')):.4f}"
+                  f"  ±{gp_state.get('gp_std_at_best', float('nan')):.4f}", flush=True)
+            print(f"  [GP] top-5 sensitivity: {top_str}", flush=True)
         elif "skipped" in gp_state:
-            print(f"  [GP] skipped — {gp_state['skipped']}", flush=True)
+            reason = gp_state["skipped"]
+            if "scikit-learn" in reason:
+                print(f"  [GP] ✗ DISABLED — scikit-learn not installed  →  pip install scikit-learn", flush=True)
+            else:
+                n_have = gp_state.get("n", len(self._history))
+                n_need = 3
+                print(f"  [GP] ⏳ warming up — {n_have}/{n_need} observations (needs {n_need} to start)", flush=True)
+        elif "error" in gp_state:
+            print(f"  [GP] ✗ fit error — {gp_state['error']}", flush=True)
+        print(f"  {'─'*56}", flush=True)
         gp_state["trial"] = trial_num
         gp_state["timestamp"] = datetime.utcnow().isoformat() + "Z"
         self._gp_history.append(gp_state)
@@ -1168,11 +1197,19 @@ class BayesianMPCTuner:
         self._persist(trial_num)
 
         new_best_tag = f"  *** NEW BEST (+{aggregate_score - prev_best:.4f}) ***" if is_new_best else ""
+        gp_status = (
+            f"GP=active(n={gp_state.get('n_observations')})"
+            if "param_sensitivity" in gp_state
+            else f"GP=disabled({gp_state.get('skipped', 'error')})"
+            if "skipped" in gp_state
+            else "GP=error"
+        )
         print(
             f"\n  [trial {trial_num:03d}/{self._max_evals}]"
             f"  aggregate={aggregate_score:.4f}"
             f"  best={self._best_score:.4f} (trial {self._best_trial:03d})"
             f"  elapsed={elapsed/60:.1f}min"
+            f"  {gp_status}"
             f"{new_best_tag}",
             flush=True,
         )
@@ -1208,13 +1245,32 @@ class BayesianMPCTuner:
     # ── Entry point ───────────────────────────────────────────────────────────
 
     def run(self, max_evals: int = MAX_EVALS, n_random: int = N_RANDOM_INIT) -> None:
+        self._n_random = n_random          # store so _objective can read it
+
+        # ── dependency check ────────────────────────────────────────────────
+        try:
+            import sklearn  # noqa: F401
+            sklearn_ok = True
+            sklearn_ver = sklearn.__version__
+        except ImportError:
+            sklearn_ok = False
+            sklearn_ver = "NOT INSTALLED"
+
         print(f"\n{'#'*60}")
         print(f"# Bayesian MPC Tuner — Go2 Gazebo")
-        print(f"# Trials: {max_evals}  |  Random init: {n_random}")
+        print(f"# Trials: {max_evals}  |  Random init: {n_random}  |  TPE-guided: {max_evals - n_random}")
         print(f"# Scenarios per trial: {len(SCENARIOS)}")
+        print(f"# Parameters: {len(PARAM_NAMES)}")
         secs_per_trial = sum(PLANNER_DELAY_SEC + s.get("timeout", SCENARIO_TIMEOUT) + 10 for s in SCENARIOS)
         print(f"# Est. time: ~{max_evals * secs_per_trial / 3600:.1f}h")
         print(f"# Results: {RESULTS_DIR}")
+        print(f"#")
+        if sklearn_ok:
+            print(f"# [OK]  scikit-learn {sklearn_ver} — GP surrogate active from trial {n_random + 1}")
+        else:
+            print(f"# [!!]  scikit-learn NOT INSTALLED — GP surrogate DISABLED")
+            print(f"#       Run: pip install scikit-learn")
+            print(f"#       All trials will use TPE only (no parameter sensitivity)")
         print(f"{'#'*60}\n")
 
         self._max_evals = max_evals
