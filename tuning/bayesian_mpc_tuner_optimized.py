@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 Bayesian MPC Tuner for Go2 — hardened for long overnight runs.
 
@@ -1251,3 +1250,295 @@ class BayesianMPCTuner:
             log.info(
                 "%s nav done — goals %d/%d (%.0f%%)  elapsed=%.0fs  failure=%s",
                 log_prefix, sum(goals_reached), len(goals),
+                goals_reached_frac * 100, time.time() - nav_start_t, failure_reason,
+            )
+
+            monitor.stop()
+            score, metrics = compute_score(monitor, final_goal, goals_reached_frac=goals_reached_frac)
+            metrics["n_goals"]            = len(goals)
+            metrics["goals_reached_frac"] = goals_reached_frac
+            if failure_reason:
+                metrics["failure_reason"] = failure_reason
+
+            # FIX-1: remove node from executor before destroying
+            if self._executor:
+                try:
+                    self._executor.remove_node(monitor)
+                except Exception:
+                    pass
+            monitor.destroy_node()
+
+        except Exception as exc:
+            failure_reason = str(exc)
+            log.error("%s exception: %s", log_prefix, exc, exc_info=True)
+            score   = 0.0
+            metrics = {"error": str(exc), "score": 0.0, "failure_reason": failure_reason}
+        finally:
+            # FIX-2: rosbag stopped before simulation kill
+            bag.stop()
+            # FIX-3: do NOT kill sim here — reused across scenarios within a trial
+
+        metrics["scenario"] = sc_name
+        metrics["weight"]   = scenario["weight"]
+        return metrics
+
+    # ── Objective function ────────────────────────────────────────────────────
+
+    def _objective(self, params: dict) -> dict:
+        self._trial_num += 1
+        trial_num  = self._trial_num
+        trial_dir  = RESULTS_DIR / f"trial_{trial_num:03d}"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+
+        now = time.time()
+        if self._run_start_t is None:
+            self._run_start_t = now
+        completed = trial_num - 1
+        eta_str   = ""
+        if completed > 0:
+            avg_sec = (now - self._run_start_t) / completed
+            eta_str = f"  ETA ~{avg_sec * (self._max_evals - completed) / 60:.0f}min"
+
+        n_random  = getattr(self, "_n_random", N_RANDOM_INIT)
+        mode_tag  = "RANDOM INIT" if trial_num <= n_random else "TPE-GUIDED"
+        log.info("=" * 60)
+        log.info(
+            "Trial %03d/%d  [%s]  %s%s",
+            trial_num, self._max_evals, mode_tag, _ts(), eta_str,
+        )
+        log.info("Params: %s", {k: f"{v:.3f}" for k, v in params.items()})
+        log.info("=" * 60)
+
+        # FIX-11: catch-all wrapper so optimisation always continues
+        try:
+            return self._run_trial(params, trial_num, trial_dir)
+        except Exception as exc:
+            log.error("[trial %03d] unhandled exception — returning zero score: %s", trial_num, exc, exc_info=True)
+            # Ensure clean simulation state before next trial
+            try:
+                self._sim.kill()
+            except Exception:
+                pass
+            return {"loss": 0.0, "status": STATUS_OK, "score": 0.0}
+
+    def _run_trial(self, params: dict, trial_num: int, trial_dir: Path) -> dict:
+        """Inner trial logic — separated so _objective can catch all exceptions."""
+        # Write trial YAML
+        trial_yaml_data   = build_trial_yaml(self._base_params, params, trial_num)
+        trial_params_path = trial_dir / "planner_params.yaml"
+        _save_yaml(trial_yaml_data, trial_params_path)
+
+        t0               = time.time()
+        scenario_results = []
+        aggregate_score  = 0.0
+
+        n_scenarios = len(SCENARIOS)
+        for sc_idx, scenario in enumerate(SCENARIOS, start=1):
+            sc_goals = scenario.get("goals", [[scenario.get("goal_x"), scenario.get("goal_y")]])
+            log.info(
+                "── Scenario %d/%d: %s  (%d goals)  weight=%.2f ──",
+                sc_idx, n_scenarios, scenario["name"], len(sc_goals), scenario["weight"],
+            )
+            result          = self._run_scenario(scenario, trial_params_path, trial_dir, trial_num, sc_idx)
+            weighted        = result.get("score", 0.0) * scenario["weight"]
+            aggregate_score += weighted
+            scenario_results.append(result)
+            log.info(
+                "  → sc=%s  goals=%.0f%%  score=%.3f  weighted=%.4f  running=%.4f"
+                "  dist=%.2f  obs=%.3f  scans=%d",
+                scenario["name"],
+                result.get("goals_reached_frac", 0.0) * 100,
+                result.get("score", 0.0), weighted, aggregate_score,
+                result.get("dist_to_goal", float("nan")),
+                result.get("obs_avoidance_score", float("nan")),
+                result.get("n_cloud_msgs", 0),
+            )
+
+        # FIX-3: kill sim after all scenarios in trial complete
+        self._sim.kill()
+
+        elapsed = time.time() - t0
+
+        # GP surrogate
+        self._history.append({
+            "trial":  trial_num,
+            "params": {k: float(v) for k, v in params.items()},
+            "score":  float(aggregate_score),
+        })
+        log.info("[GP] fitting on %d observations…", len(self._history))
+        gp_state = fit_gp_surrogate(self._history)
+        if "param_sensitivity" in gp_state:
+            top = sorted(gp_state["param_sensitivity"].items(), key=lambda kv: kv[1], reverse=True)[:5]
+            log.info(
+                "[GP] active  noise=%.4f  gp_mean=%.4f±%.4f  top5=%s",
+                gp_state.get("noise_level", float("nan")),
+                gp_state.get("gp_mean_at_best", float("nan")),
+                gp_state.get("gp_std_at_best", float("nan")),
+                "  ".join(f"{k}={v:.3f}" for k, v in top),
+            )
+        elif "skipped" in gp_state:
+            log.info("[GP] skipped — %s", gp_state["skipped"])
+        elif "error" in gp_state:
+            log.warning("[GP] fit error — %s", gp_state["error"])
+
+        gp_state["trial"]     = trial_num
+        gp_state["timestamp"] = datetime.utcnow().isoformat() + "Z"
+        self._gp_history.append(gp_state)
+        _save_json(gp_state, trial_dir / "gp_surrogate.json")
+
+        # TPE snapshot
+        _save_json(serialize_tpe_state(self._hp_trials, trial_num), trial_dir / "tpe_state.json")
+
+        # Metadata
+        metadata = {
+            "trial":           trial_num,
+            "timestamp":       datetime.utcnow().isoformat() + "Z",
+            "params":          {k: float(v) for k, v in params.items()},
+            "aggregate_score": float(aggregate_score),
+            "elapsed_sec":     float(elapsed),
+            "scenarios":       scenario_results,
+            "gp_summary": {
+                "n_observations":    gp_state.get("n_observations"),
+                "noise_level":       gp_state.get("noise_level"),
+                "param_sensitivity": gp_state.get("param_sensitivity"),
+            },
+        }
+        _save_json(metadata, trial_dir / "metadata.json")
+
+        # Track best
+        prev_best   = self._best_score
+        is_new_best = aggregate_score > self._best_score
+        if is_new_best:
+            self._best_score  = aggregate_score
+            self._best_params = {k: float(v) for k, v in params.items()}
+            self._best_trial  = trial_num
+            shutil.copy(trial_params_path, RESULTS_DIR / "best_planner_params.yaml")
+            log.info("*** NEW BEST  score=%.4f (+%.4f)  trial=%03d ***",
+                     aggregate_score, aggregate_score - prev_best, trial_num)
+
+        # Persist + cleanup
+        self._persist(trial_num)
+        # FIX-7: disk cleanup
+        _cleanup_old_bags(RESULTS_DIR, BAG_KEEP_LAST_N_TRIALS)
+
+        gp_status = (
+            f"GP=active(n={gp_state.get('n_observations')})"
+            if "param_sensitivity" in gp_state
+            else f"GP=waiting({gp_state.get('skipped', 'error')})"
+        )
+        log.info(
+            "[trial %03d/%d]  aggregate=%.4f  best=%.4f(t%03d)"
+            "  elapsed=%.1fmin  %s",
+            trial_num, self._max_evals,
+            aggregate_score, self._best_score, self._best_trial,
+            elapsed / 60, gp_status,
+        )
+
+        return {"loss": -aggregate_score, "status": STATUS_OK, "score": aggregate_score}
+
+    def _persist(self, trial_num: int) -> None:
+        summary = {
+            "best_score":  float(self._best_score),
+            "best_trial":  self._best_trial,
+            "best_params": self._best_params,
+            "trials": [
+                {
+                    "trial":   t["trial"],
+                    "params":  t["params"],
+                    "score":   t["score"],
+                    "is_best": t["trial"] == self._best_trial,
+                }
+                for t in self._history
+            ],
+        }
+        _save_json(summary,          RESULTS_DIR / "results.json")
+        _save_json(self._gp_history, RESULTS_DIR / "gp_history.json")
+        _plot_convergence([{"score": t["score"]} for t in self._history], RESULTS_DIR / "convergence.png")
+        _plot_param_importance(self._gp_history, RESULTS_DIR / "param_importance.png")
+        _plot_length_scales(self._gp_history,    RESULTS_DIR / "length_scales.png")
+
+    # ── Entry point ───────────────────────────────────────────────────────────
+
+    def run(self, max_evals: int = MAX_EVALS, n_random: int = N_RANDOM_INIT) -> None:
+        self._n_random  = n_random
+        self._max_evals = max_evals
+
+        # FIX-1: single rclpy.init() for the entire run
+        self._ros_init()
+
+        try:
+            import sklearn
+            sklearn_ok  = True
+            sklearn_ver = sklearn.__version__
+        except ImportError:
+            sklearn_ok  = False
+            sklearn_ver = "NOT INSTALLED"
+
+        secs_per_trial = sum(
+            PLANNER_DELAY_SEC + s.get("timeout", SCENARIO_TIMEOUT) + 10
+            for s in SCENARIOS
+        )
+        log.info("#" * 60)
+        log.info("# Bayesian MPC Tuner — Go2 Gazebo (hardened)")
+        log.info("# Trials=%d  RandomInit=%d  TPE=%d", max_evals, n_random, max_evals - n_random)
+        log.info("# Scenarios/trial=%d  Params=%d", len(SCENARIOS), len(PARAM_NAMES))
+        log.info("# Est. time: ~%.1fh", max_evals * secs_per_trial / 3600)
+        log.info("# Results: %s", RESULTS_DIR)
+        if sklearn_ok:
+            log.info("# [OK] scikit-learn %s — GP active from trial %d", sklearn_ver, n_random + 1)
+        else:
+            log.warning("# [!!] scikit-learn NOT INSTALLED — install with: pip install scikit-learn")
+        log.info("#" * 60)
+
+        try:
+            fmin(
+                fn=self._objective,
+                space=SEARCH_SPACE,
+                algo=tpe.suggest,
+                max_evals=max_evals,
+                trials=self._hp_trials,
+                rstate=np.random.default_rng(42),
+                show_progressbar=False,
+            )
+        except KeyboardInterrupt:
+            log.info("[Interrupted] saving partial results…")
+        finally:
+            self._persist(self._trial_num)
+            # FIX-1: single shutdown
+            self._ros_shutdown()
+
+        log.info("=" * 60)
+        log.info("COMPLETE — best=%.4f (trial %d)", self._best_score, self._best_trial)
+        if self._best_params:
+            for k, v in self._best_params.items():
+                log.info("  %s: %.4f", k, v)
+        log.info("Deploy:  cp %s/best_planner_params.yaml %s", RESULTS_DIR, BASE_PARAMS)
+        log.info("=" * 60)
+
+
+# ─── Heartbeat sleep (FIX-9, FIX-10) ─────────────────────────────────────────
+
+def _heartbeat_sleep(seconds: float, prefix: str = "", interval: float = 10.0) -> None:
+    """Sleep for `seconds` with periodic heartbeat log lines."""
+    elapsed = 0.0
+    while elapsed < seconds:
+        chunk    = min(interval, seconds - elapsed)
+        time.sleep(chunk)
+        elapsed += chunk
+        remaining = seconds - elapsed
+        if remaining > 0:
+            log.debug("%s heartbeat — %.0fs remaining", prefix, remaining)
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Bayesian MPC tuner for Go2 (hardened)")
+    ap.add_argument("--trials",  type=int,  default=MAX_EVALS,     help="Total trials")
+    ap.add_argument("--random",  type=int,  default=N_RANDOM_INIT,  help="Random init trials")
+    ap.add_argument("--gui",     action="store_true",               help="Launch Gazebo/RViz with GUI")
+    args = ap.parse_args()
+
+    BayesianMPCTuner(gui=args.gui).run(max_evals=args.trials, n_random=args.random)
