@@ -24,7 +24,7 @@
     # MPC horizon parameters
     # ─────────────────────────────────────────────────────────────
     mpc_N: 50                    # prediction horizon steps
-    mpc_dt: 0.1                 # time step [s] — 50×0.05=2.5s horizon
+    mpc_dt: 0.1                 # time step [s] — 50×0.1=5s horizon
 
     # ─────────────────────────────────────────────────────────────
     # Actuator lag model (fixes #3 holonomic mismatch + #4 lag)

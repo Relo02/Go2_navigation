@@ -287,12 +287,19 @@ All four nodes share a single parameter file loaded with `--params-file`.
 
 ## Running the Stack
 
-Build and source first:
-
 ```bash
+# Run the container:
+cd ~/docker-go2
+./run.sh humble
+
+# Build and source first:
 cd ~/Go2_navigation
 colcon build
 source install/setup.bash
+
+# Install the missing python dependencies:
+cd ~/Go2_navigation
+pip install -r requirements.txt
 ```
 
 ### Headless mode (SSH / no GPU) in remote PC

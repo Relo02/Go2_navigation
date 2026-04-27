@@ -50,7 +50,8 @@ from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 
 REPO_ROOT    = Path(__file__).parent.parent.resolve()
 BASE_PARAMS  = REPO_ROOT / "src/a_star_mpc_planner/config/planner_params.yaml"
-RESULTS_DIR  = Path("/media/lorenzo/writable/tuning_results")
+RESULTS_DIR  = Path(os.environ.get("TUNING_RESULTS_DIR",
+                    "/media/lorenzo/writable/tuning_results"))
 ROS_SETUP    = "/opt/ros/humble/setup.bash"
 PKG_SETUP    = REPO_ROOT / "install/setup.bash"
 
@@ -69,7 +70,7 @@ SEARCH_SPACE = {
     # Path following
     # "mpc_lookahead_dist":   hp.uniform("mpc_lookahead_dist",    0.5,    2.5),
     # A* soft obstacle cost
-    "grid_std":            hp.uniform("grid_std",            0.1,    0.5),
+    "grid_std":            hp.uniform("grid_std",            0.1,    0.25),
 }
 
 PARAM_NAMES  = list(SEARCH_SPACE.keys())

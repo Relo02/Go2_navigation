@@ -93,7 +93,7 @@ def load_all(results_dir: Path):
 
 def load_results_json(results_dir: Path):
     p = results_dir / "results.json"
-    if p.exists():
+    if p.exists() and p.stat().st_size > 0:
         with open(p) as f:
             return json.load(f)
     return None
@@ -104,7 +104,7 @@ def scenario_series(metas, key, scenario):
     trials, vals = [], []
     for m in metas:
         for s in m["scenarios"]:
-            if s["scenario"] == scenario:
+            if s["scenario"] == scenario and key in s:
                 trials.append(m["trial"])
                 vals.append(s[key])
                 break
